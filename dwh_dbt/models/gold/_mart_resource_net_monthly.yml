@@ -1,0 +1,18 @@
+version: 2
+
+models:
+  - name: mart_resource_net_monthly
+    description: >-
+      Monthly allocated revenue and views at resource x NET grain for Power BI.
+      This table replaces high-memory resource-to-video TREATAS calculations.
+    columns:
+      - name: resource_id
+        tests:
+          - not_null
+      - name: net_id
+        description: Null when the video's channel has no network mapping.
+      - name: revenue_month
+        tests:
+          - not_null
+      - name: revenue_amount
+      - name: view_count
