@@ -1,4 +1,4 @@
-import logging, requests, pandas as pd, json, gc
+import logging, requests, pandas as pd, json, gc, io
 from typing import Optional
 from src.extractors.base import BaseExtractor, ExtractResult
 log = logging.getLogger(__name__)
@@ -31,18 +31,22 @@ class ElasticExtractor(BaseExtractor):
             from src.connections import get_connection, get_sqlalchemy_uri
             dwh = create_engine(get_sqlalchemy_uri(get_connection("dwh_postgres")))
             schema, table = cfg["target_staging_table"].split(".")
+        else:
+            from src.minio_client import MinIOClient
+            minio = MinIOClient()
+            batch_id = minio.make_batch_id(cfg["source_id"])
+            minio_parts = []
 
         TIMESTAMP_SUFFIXES = ("At", "Date", "Time", "Utc", "UTC")
+        CHUNK_PAGES = 10  # upload MinIO mỗi 10 page (50k dòng)
 
         def clean(df):
             for c in df.columns:
-                # dict/list → json string
                 if df[c].map(lambda v: isinstance(v, (dict, list))).any():
                     df[c] = df[c].map(
                         lambda v: json.dumps(v, ensure_ascii=False)
                         if isinstance(v, (dict, list)) else v
                     )
-                # suffix gợi ý datetime → ép kiểu
                 if any(c.endswith(s) for s in TIMESTAMP_SUFFIXES):
                     df[c] = pd.to_datetime(df[c], utc=True, errors="coerce")
             df["_source_id"] = cfg["source_id"]
@@ -59,8 +63,8 @@ class ElasticExtractor(BaseExtractor):
                     dtype[c] = Text()
             return dtype
 
-        rows, after, total, page = [], None, 0, 0
-        dtype_map = None  # tính 1 lần ở page đầu, tái dùng cho các page sau
+        rows, after, total, page, part = [], None, 0, 0, 0
+        dtype_map = None
 
         while True:
             if after:
@@ -78,21 +82,41 @@ class ElasticExtractor(BaseExtractor):
             if stream:
                 df = clean(pd.json_normalize(batch))
                 if dtype_map is None:
-                    dtype_map = get_dtype_map(df)  # tính 1 lần duy nhất từ page 1
+                    dtype_map = get_dtype_map(df)
                 df.to_sql(
                     table, dwh, schema=schema, index=False,
                     if_exists=("replace" if page == 1 else "append"),
                     method="multi", chunksize=1000,
-                    dtype=dtype_map,              # ← luôn truyền dtype_map
+                    dtype=dtype_map,
                 )
                 log.info(f"[{cfg['source_id']}] page {page}: +{len(hits)} (tổng {total}) -> staging")
                 del df, batch, r
                 gc.collect()
             else:
                 rows += batch
+                # upload MinIO mỗi CHUNK_PAGES page để tránh OOM
+                if page % CHUNK_PAGES == 0:
+                    part += 1
+                    chunk_df = clean(pd.json_normalize(rows))
+                    path = minio.upload_dataframe_part(chunk_df, cfg, batch_id, part)
+                    minio_parts.append(path)
+                    log.info(f"[{cfg['source_id']}] upload part {part}: {len(rows)} dòng -> MinIO")
+                    rows = []
+                    del chunk_df
+                    gc.collect()
 
             if len(hits) < size:
                 break
+
+        # upload phần còn lại chưa đủ CHUNK_PAGES
+        if not stream and rows:
+            part += 1
+            chunk_df = clean(pd.json_normalize(rows))
+            path = minio.upload_dataframe_part(chunk_df, cfg, batch_id, part)
+            minio_parts.append(path)
+            log.info(f"[{cfg['source_id']}] upload part {part} (cuối): {len(rows)} dòng -> MinIO")
+            del chunk_df
+            gc.collect()
 
         if stream:
             return ExtractResult(
@@ -100,10 +124,14 @@ class ElasticExtractor(BaseExtractor):
                 checksum=None, watermark_value=None,
                 source_meta={"index": index, "streamed": True}
             )
-        df = clean(pd.json_normalize(rows)) if rows else pd.DataFrame()
+
+        # trả về path part đầu tiên để load_task biết prefix
+        first_path = minio_parts[0] if minio_parts else ""
         return ExtractResult(
-            dataframe=df, row_count=len(df), checksum=None,
-            watermark_value=None, source_meta={"index": index}
+            dataframe=pd.DataFrame(), row_count=total,
+            checksum=None, watermark_value=None,
+            source_meta={"index": index, "batch_id": batch_id,
+                         "minio_path": first_path, "streamed": False}
         )
 
     def has_changed(self, last):

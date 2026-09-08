@@ -78,7 +78,7 @@ def main():
     p_run.set_defaults(func=cmd_run)
 
     p_rollback = subparsers.add_parser("rollback", help="Rollback về batch cũ theo ngày")
-    p_rollback.add_argument("--date", required=True, help="YYYY-MM-DD")
+    p_rollback.add_argument("--date", required=False, default=None, help="YYYY-MM-DD, để trống = rollback về batch gần nhất có file MinIO")
     p_rollback.add_argument("--ids", help="comma-separated source_id, để trống = tất cả")
     p_rollback.set_defaults(func=cmd_rollback)
 

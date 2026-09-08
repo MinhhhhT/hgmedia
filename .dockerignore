@@ -1,0 +1,12 @@
+.git
+.env
+.venv
+__pycache__
+*.py[cod]
+*.log
+airflow.db
+outputs
+dwh_dbt/dbt_packages
+dwh_dbt/logs
+dwh_dbt/target
+config/gsheet_service_account.json

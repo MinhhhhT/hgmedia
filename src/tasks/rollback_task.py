@@ -12,7 +12,7 @@ from src.source_registry import SourceRegistry
 logger = logging.getLogger(__name__)
 
 
-def run_rollback(source_config: dict, target_date: str):
+def run_rollback(source_config: dict, target_date: str = None):
     source_id = source_config["source_id"]
     staging_table = source_config["target_staging_table"]
 
@@ -22,13 +22,23 @@ def run_rollback(source_config: dict, target_date: str):
 
     batch = registry.find_batch_for_rollback(source_id, target_date)
     if not batch:
-        logger.warning(f"[{source_id}] Không tìm thấy batch nào <= {target_date} để rollback.")
+        if target_date:
+            logger.warning(f"[{source_id}] Không tìm thấy batch có file MinIO <= {target_date}")
+        else:
+            logger.warning(f"[{source_id}] Không tìm thấy batch có file MinIO để rollback")
         return
 
-    df = minio.download_dataframe(batch["minio_path"])
-    loader.load(df, staging_table=staging_table, batch_id=batch["batch_id"], load_mode="truncate")
-
+    label = f"[target_date={target_date}]" if target_date else "[latest]"
     logger.info(
-        f"[{source_id}] Rollback xong về batch {batch['batch_id']} "
-        f"(extracted_at={batch['extracted_at']}, {len(df)} dòng)"
+        f"[{source_id}] Rollback về batch {batch['batch_id']} "
+        f"(extracted_at={batch['extracted_at']}, {batch['row_count']} dòng) {label}"
     )
+
+    # Load từng part trực tiếp, không concat vào RAM
+    total = minio.download_and_load(
+        batch["minio_path"],
+        staging_table=staging_table,
+        loader=loader,
+        batch_id=batch["batch_id"]
+    )
+    logger.info(f"[{source_id}] Rollback xong: {total} dòng → {staging_table}")

@@ -1,0 +1,111 @@
+dim_department_sk,department_id,company_id,department_name
+045117b0e0a11a242b9765e79cbf113f,180,3,Phòng HCNS
+fc221309746013ac554571fbd180e1c8,181,2,thể
+9a1158154dfa42caddbd0694a4e9bdc8,52,2,Team MKT Thể
+b53b3a3d6ab90ce0268229151c9bde11,55,2,Team MKT Tuyên
+d67d8ab4f4c10bf22aa353e27879133c,39,2,Phòng MKT3
+8f53295a73878494e9bc8dd6c3c7104f,179,1,HG Media
+6ea9ab1baa0efb9e19094440c317e21b,29,10,BD
+c16a5320fa475530d9583c34fd356ef5,31,,Thu Mua Nhạc
+4e732ced3463d06de0ca9a15b6153677,26,,Trợ lý trưởng phòng HN
+33e75ff09dd601bbe69f351039152189,28,,Trợ lý trưởng phòng SG
+19ca14e7ea6328a42e0eb13d585e4c22,36,2,Phòng hỗ trợ Red One
+34173cb38f07f89ddbebc2ac9128303f,30,,Thu Mua Footage
+e369853df766fa44e1ed0ff613f563bd,34,,Vận hành Youtube
+1c383cd30b7c298ab50293adfecb7b18,35,2,Red One Media
+013d407166ec4fa56eb1e1f8cbe183b9,138,7,Marketing Label
+ed3d2c21991e3bef5e069713af9fa6ca,98,,Vibe
+1ff1de774005f8da13f42943881c655f,24,,A&R HN
+c0c7c76d30bd3dcaefc96f40275bdc0a,50,2,Team MKT Quang
+d9d4f495e875a2e075a1a4a6e1b9770f,46,,Team Motion
+642e92efb79421734881b53e1e1b18b6,48,2,Team MKT Hoài Nam
+02e74f10e0327ad868d138f2b4fdd6f0,27,,A&R SG
+0a09c8844ba8f0936c20bd791130d6b6,144,,Hành chính nhân sự
+182be0c5cdcd5072bb1864cdee4d3d6e,33,,Kế toán
+2838023a778dfaecdc212708f721b788,51,2,Team MKT Hải Nam
+a5bfc9e07964f8dddeb95fc584cd965d,37,2,Phòng Sáng tạo
+ac627ab1ccbdb62ec96e702f07f6425b,99,,HG La Giang
+38b3eff8baf56627478ec76a704e9b52,101,,Team trợ lý
+f457c545a9ded88f18ecee47145a72c0,49,2,Team MKT Kinh
+8f85517967795eeef66c225f7883bdcb,178,3,Phòng MKT Cơ sở 2
+d82c8d1619ad8176d665453cfb2e55f0,53,,Team MKT Tuấn 2K
+ec8956637a99787bd197eacd77acce5e,102,,Team R&D
+6974ce5ac660610b44d9b9fed0ff9548,103,,Team Thu mua
+a1d0c6e83f027327d8461063f4ac58a6,42,2,Team trợ lý
+e2ef524fbf3d9fe611d5a8e90fefdc9c,97,3,An Tuệ
+a5771bce93e200c36f7cd9dfd0e5deaa,38,2,Phòng MKT1
+6364d3f0f495b6ab9dcf8d3b5c6e0b01,32,,Network
+e00da03b685a0dd18fb6a08af0923de0,139,,Vận hành Label
+f899139df5e1059396431415e770c6dd,100,3,Phòng Cung ứng
+d645920e395fedad7bbbed0eca3fe2e0,40,2,Phòng MKT2
+f0935e4cd5920aa6c7c996a5ee53a70f,106,3,Phòng Sáng tạo
+698d51a19d8a121ce581499d7b701668,111,3,Phòng MKT Trung
+3416a75f4cea9109507cacd8e2f2aefc,41,2,Phòng MKT Tuấn TP
+73278a4a86960eeb576a8fd4c9ec6997,113,3,Phòng MKT Quân
+9f61408e3afb633e50cdf1b20de6f466,56,2,Team MKT Duy
+a684eceee76fc522773286a895bc8436,54,2,Team MKT Luân
+1385974ed5904a438616ff7bdb3f7439,140,,Performance
+c4ca4238a0b923820dcc509a6f75849b,1,,Quản trị
+2723d092b63885e0d7c260cc007e8b9d,109,3,Team Design
+b6d767d2f8ed5d21a44b0e5886680cb9,22,8,Sản Xuất Nhạc SG
+eb160de1de89d9058fcb0b968dbbbd68,117,4,Phòng MKT Thi
+3988c7f88ebcb58c6ce932b957b6f332,137,3,Team sản xuất
+4c56ff4ce4aaf9573aa5dff913df997a,121,,Team Thu mua
+3c59dc048e8850243be8079a5c74d079,21,8,Sản Xuất Nhạc HN
+d1f491a404d6854880943e5c3cd9ca25,129,6,Phòng hỗ trợ
+17e62166fc8586dfa4d1bc0e1742c08b,43,2,Team 2D
+a97da629b098b75c294dffdc3e463904,107,3,Team 2D Artist
+ec5decca5ed3d6b8079e2e7e7bacc9f2,127,4,Team Design
+76dc611d6ebaafc66cc0879c71b5db5c,128,4,Team Edit
+5f93f983524def3dca464469d2cf9f3e,110,3,Team Edit
+9766527f2b5d3e95d4a733fcfb77bd7e,165,8,Inhouse Producer
+7f1de29e6da19d22b51c68001e7e0e54,135,,Phòng design La Giang
+0777d5c17d4066b82ab86dff8a46af6f,163,1,Hành Chính Nhân Sự
+fa7cdfad1a5aaf8370ebeda47a1ff1c3,164,1,IT
+1c9ac0159c94d8d0cbedc973445af2da,156,1,Team Trợ Lý
+2a79ea27c279e471f4d180b08d62b00a,155,1,Kế Toán
+82aa4b0af34c2313a562076992e50aa3,162,14,Forest Music
+149e9677a5989fd342ae44213df68868,170,,Tiktok
+a4a042cf4fd6bfb47701cbc8a1653ada,171,,Training Department
+82161242827b703e6acf9c726942a1e4,175,,Youtube - Marketing 4
+b73ce398c39f506af761d2277d853a92,160,,Creative Studio
+bd4c9ab730f5513206b999ec0d90d1fb,161,,External Relations Department
+006f52e9102a8d3be2fe5614f42ba989,168,,Operation
+3636638817772e42b59d74cff571fbb3,169,,Project Management
+65b9eea6e1cc6bb9f0cd2a47751a186f,105,,Team Hậu kỳ màu
+5fd0b37cd7dbbb00f97ba6ce92bf5add,114,3,Team MKT Long
+a8f15eda80c50adb0e71943adc8015cf,151,,Editor
+37a749d808e46495a8da1e5352d03cae,152,,Sản xuất
+b3e3e393c77e35a4a3f3cbd1e429b5dc,153,,Art
+1d7f7abc18fcb43975065399b0d1e48e,154,,Concept Designer
+7ef605fc8dba5425d6965fbd4c8fbe1f,150,,Quay Phim
+07e1cd7dca89a1678042477183b7ac3f,119,,Team trợ lý
+6c8349cc7260ae62e3b1396831a8398f,45,2,Team Editor
+8e296a067a37563370ded05f5a3bf3ec,25,,Producer In House
+37693cfc748049e45d87b8c7d8b9aacd,23,,Quản lý sản xuất
+98f13708210194c475687be6106a3b84,20,,Sản Xuất Nhạc
+c8ffe9a587b126f152ed3d89a146b445,124,4,Phòng Design Vibe
+5ef059938ba799aaa845e1c2e8a762bd,118,4,Phòng hỗ trợ Vibe
+069059b7ef840f0c74a814ec9237b6ec,126,3,Team 3D
+3def184ad8f4755ff269862ea77393dd,125,4,Team 2D Artist
+9b8619251a19057cff70779273e95aa6,130,,Team trợ lý
+1afa34a7f984eeabdbb0a7d494132ee5,131,,Team R&D
+a3c65c2974270fd093ee8a9bf8ae7d0b,108,4,Team 3D
+f7177163c833dff4b38fc8d2872f1ec6,44,2,Team 3D
+67c6a1e7ce56d3d6fa748ab6d9af3fd7,47,2,Team AI
+da4fb5c6e93e74d3df8527599fa62642,120,,Team R&D
+65ded5353c5ee48d0b7d48c591b8f430,132,,Team Thu mua
+42a0e188f5033bc65bf8d78622277c4e,136,,Phòng MKT HG La Giang
+6c4b761a28b734fe93831e3fb400ce87,157,1,Board of Directors
+903ce9225fca3e988c2af215d4e544d3,143,7,Content Marketing
+0f28b5d49b3020afeecd95b4009adf4c,141,,Design
+a8baa56554f96369ab93e4f3bb068c22,142,,Social Marketing
+02522a2b2726fb0a03bb19f2d8d9524d,134,,Team Hậu kỳ màu
+2b44928ae11fb9384c4cf38708677c48,115,3,Team MKT Thảo
+7f6ffaa6bb0b408017b62254211691b5,112,3,Team MKT Trung
+202cb962ac59075b964b07152d234b70,123,,Team Hậu kỳ màu
+c45147dee729311ef5b5c3003946c48f,116,3,Team MKT Quân
+9fc3d7152ba9336a670e36d0ed79bc43,133,3,Team Hậu kỳ âm thanh
+a0a080f42e6f13b3a2df133f073095dd,122,4,Team Hậu kỳ âm thanh
+c9e1074f5b3f9fc8ea15d152add07294,104,6,Team Hậu kỳ âm thanh
+4c5bde74a8f110656874902f07378009,182,2,hải nam

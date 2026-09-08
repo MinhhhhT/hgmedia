@@ -1,27 +1,55 @@
 """
-dags/el_elastic_dag.py
-DAG cho nhóm nguồn Elasticsearch với giao diện chọn bảng trong Airflow UI.
-Trigger thủ công: chọn index muốn chạy + tuỳ chọn date range.
-Lịch tự động: chạy TẤT CẢ mỗi 6 tiếng.
+src/dags/el_elastic_dag.py
+
+EL DAG cho nhóm nguồn Elasticsearch:
+Elasticsearch → MinIO → staging → trigger Elasticsearch Data Quality.
 """
-import sys
+
 import os
+import sys
 from datetime import datetime, timedelta
+
+from airflow.models.param import Param
+from airflow.providers.standard.operators.trigger_dagrun import (
+    TriggerDagRunOperator,
+)
+from airflow.sdk import dag, task
+
 
 PROJECT_ROOT = os.environ.get(
     "DWH_PROJECT_ROOT",
-    "/mnt/d/HG_Project/etl_pipeline/dwh-pipeline-mapping/dwh-pipeline"
+    os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "..",
+        )
+    ),
 )
 
-from airflow.sdk import dag, task
-from airflow.models.param import Param
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
 
-ALL_SOURCES = ["channel_video_info", "channel_video_metric"]
+
+SOURCE_GROUP = "elastic"
+DQ_DAG_ID = "data_quality_el_elastic_pipeline"
+
+
+ALL_SOURCES = [
+    "channel_video_info",
+    "channel_video_metric",
+]
+
 
 SOURCE_DESCRIPTIONS = {
-    "channel_video_info":   "ES index: channel-video-info (thông tin video kênh)",
-    "channel_video_metric": "ES index: channel-video-metric-* (metrics video theo ngày)",
+    "channel_video_info": (
+        "ES index channel-video-info"
+    ),
+    "channel_video_metric": (
+        "ES index channel-video-metric-*"
+    ),
 }
+
 
 default_args = {
     "owner": "data-team",
@@ -36,90 +64,207 @@ default_args = {
     start_date=datetime(2026, 1, 1),
     catchup=False,
     default_args=default_args,
-    tags=["el", "elasticsearch"],
     max_active_tasks=4,
+    tags=[
+        "el",
+        "elasticsearch",
+        "minio",
+        "staging",
+    ],
     params={
         "selected_tables": Param(
             default="all",
             type="string",
-            title="Chọn index Elasticsearch cần chạy",
+            title="Chọn Elasticsearch index",
             description=(
-                "'all' = chạy tất cả\n\n"
-                + "\n".join(f"  {k}: {v}" for k, v in SOURCE_DESCRIPTIONS.items())
+                "'all' để chạy tất cả.\n\n"
+                + "\n".join(
+                    f"{source}: {description}"
+                    for source, description
+                    in SOURCE_DESCRIPTIONS.items()
+                )
             ),
-            enum=["all"] + ALL_SOURCES,
+            enum=[
+                "all",
+                *ALL_SOURCES,
+            ],
         ),
         "date_from": Param(
             default="",
-            type=["string", "null"],   # ← cho phép null/empty
-            title="Từ ngày (tuỳ chọn)",
+            type=["string", "null"],
+            title="Ngày bắt đầu",
             description=(
-                "Override date_from trong config. Định dạng: YYYY-MM-DD.\n"
-                "Để trống → dùng date_from trong config (mặc định 2025-06-01)."
+                "Override date_from trong config. "
+                "Định dạng YYYY-MM-DD. "
+                "Để trống để dùng giá trị mặc định."
             ),
-            minLength=0,               # ← cho phép chuỗi rỗng
         ),
     },
-    
 )
 def el_elastic_pipeline():
-
     @task
     def get_sources(**context):
-        import sys, os
-        sys.path.insert(0, PROJECT_ROOT)
         os.chdir(PROJECT_ROOT)
+
         from src.config_loader import load_sources
 
-        selected = context["params"].get("selected_tables", "all")
-        date_from = context["params"].get("date_from", "")  # Bug 2: lấy date_from từ params
+        selected_table = context[
+            "params"
+        ].get(
+            "selected_tables",
+            "all",
+        )
 
-        all_sources = load_sources("config/elastic_sources.yaml", "elastic_sources")  # Bug 1: khai báo trước
+        date_from = context[
+            "params"
+        ].get(
+            "date_from",
+            "",
+        )
 
-        if selected == "all":
+        all_sources = load_sources(
+            "config/elastic_sources.yaml",
+            "elastic_sources",
+        )
+
+        if selected_table == "all":
             filtered = all_sources
         else:
-            filtered = [s for s in all_sources if s["source_id"] == selected]  # Bug 3: == thay vì in
+            filtered = [
+                source
+                for source in all_sources
+                if source["source_id"]
+                == selected_table
+            ]
 
-        # Override date_from nếu user nhập
         if date_from:
-            for s in filtered:
-                s["date_from"] = date_from
-            print(f"📅 Override date_from = {date_from}")
+            for source in filtered:
+                source["date_from"] = date_from
 
-        print(f"✅ Sẽ chạy {len(filtered)}/{len(all_sources)} index: {[s['source_id'] for s in filtered]}")
+            print(
+                f"Override date_from={date_from}"
+            )
+
+        print(
+            f"Sẽ chạy {len(filtered)}/"
+            f"{len(all_sources)} Elasticsearch source:"
+        )
+
+        for source in filtered:
+            print(
+                f"  {source['source_id']} → "
+                f"{source['target_staging_table']}"
+            )
+
         return filtered
 
     @task
-    def extract_and_load(source_config: dict):
-        import sys, os
-        sys.path.insert(0, PROJECT_ROOT)
+    def extract_and_load(
+        source_config: dict,
+    ):
         os.chdir(PROJECT_ROOT)
+
         from src.tasks.extract_task import run_extract
         from src.tasks.load_task import run_load
 
         source_id = source_config["source_id"]
-        print(f"▶ Bắt đầu extract: {source_id} (from {source_config.get('date_from')})")
+        target_table = source_config[
+            "target_staging_table"
+        ]
 
-        extract_result = run_extract(source_config)
+        print(
+            f"[{source_id}] Bắt đầu extract "
+            "Elasticsearch"
+        )
+
+        extract_result = run_extract(
+            source_config
+        )
+
         if extract_result is None:
-            print(f"⏭ [{source_id}] skip")
-            return f"[{source_id}] skip"
-
-        if extract_result.get("streamed"):
-            row_count = extract_result["row_count"]
-        else:
-            row_count = run_load(
-                source_config,
-                extract_result["batch_id"],
-                extract_result["minio_path"],
+            print(
+                f"[{source_id}] Skip - "
+                "không có dữ liệu"
             )
 
-        print(f"✅ [{source_id}] loaded ({row_count} rows)")
-        return f"[{source_id}] loaded ({row_count} rows)"
+            return {
+                "source_id": source_id,
+                "source_group": SOURCE_GROUP,
+                "target_table": target_table,
+                "status": "skipped",
+                "batch_id": None,
+                "minio_path": None,
+                "row_count": 0,
+            }
+
+        row_count = run_load(
+            source_config,
+            extract_result["batch_id"],
+            extract_result["minio_path"],
+        )
+
+        print(
+            f"[{source_id}] Loaded "
+            f"{row_count} rows → {target_table}"
+        )
+
+        return {
+            "source_id": source_id,
+            "source_group": SOURCE_GROUP,
+            "target_table": target_table,
+            "status": "loaded",
+            "batch_id": extract_result["batch_id"],
+            "minio_path": extract_result["minio_path"],
+            "row_count": row_count,
+        }
+
+    @task
+    def build_dq_conf(
+        load_results,
+        **context,
+    ):
+        results = list(load_results)
+
+        loaded_results = [
+            result
+            for result in results
+            if result.get("status") == "loaded"
+        ]
+
+        print(
+            "Chuẩn bị trigger Elasticsearch DQ: "
+            f"loaded={len(loaded_results)}, "
+            f"total={len(results)}"
+        )
+
+        return {
+            "parent_dag_id": context["dag"].dag_id,
+            "parent_dag_run_id": (
+                context["dag_run"].run_id
+            ),
+            "source_group": SOURCE_GROUP,
+            "load_results": loaded_results,
+        }
 
     sources = get_sources()
-    extract_and_load.expand(source_config=sources)
+
+    load_results = extract_and_load.expand(
+        source_config=sources
+    )
+
+    dq_conf = build_dq_conf(
+        load_results
+    )
+
+    trigger_dq = TriggerDagRunOperator(
+        task_id="trigger_data_quality_elastic",
+        trigger_dag_id=DQ_DAG_ID,
+        conf=dq_conf,
+        wait_for_completion=False,
+        reset_dag_run=False,
+    )
+
+    dq_conf >> trigger_dq
 
 
 el_elastic_pipeline()

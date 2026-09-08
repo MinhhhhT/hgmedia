@@ -13,7 +13,7 @@ Config mẫu (xem config/db_sources.yaml):
   incremental: true
 """
 from typing import Optional
-
+import gc
 import pandas as pd
 from sqlalchemy import create_engine, text
 
@@ -98,21 +98,63 @@ class SQLExtractor(BaseExtractor):
                                  checksum=None, watermark_value=wm,
                                  source_meta={"query": query, "streamed": True})
 
-        chunks, total = [], 0
-        for i, ck in enumerate(pd.read_sql(query, engine, chunksize=chunksize), 1):
-            chunks.append(ck); total += len(ck)
-            log.info(f"[{cfg['source_id']}] chunk {i}: +{len(ck)} (tổng {total})")
-        df = pd.concat(chunks, ignore_index=True) if chunks else pd.DataFrame()
-        log.info(f"[{cfg['source_id']}] Đọc xong {len(df)} dòng từ {cfg.get('source_table')}")
-        df["_source_id"] = cfg["source_id"]
-        df["_source_connection"] = cfg["connection"]
-        watermark_value = None
-        if cfg.get("watermark_column") and cfg["watermark_column"] in df.columns and len(df) > 0:
-            watermark_value = str(df[cfg["watermark_column"]].max())
-        return ExtractResult(dataframe=df, row_count=len(df), checksum=None,
-                             watermark_value=watermark_value,
-                             source_meta={"query": query, "connection": cfg["connection"]})
+        PART_THRESHOLD = 100000  # bảng > 100k dòng thì chia part
 
+        chunks, total = [], 0
+        part = 0
+        minio_parts = []
+        watermark_value = None
+
+        from src.minio_client import MinIOClient
+        minio = MinIOClient()
+        batch_id = minio.make_batch_id(cfg["source_id"])
+
+        for i, ck in enumerate(pd.read_sql(query, engine, chunksize=chunksize), 1):
+            ck["_source_id"] = cfg["source_id"]
+            ck["_source_connection"] = cfg["connection"]
+            total += len(ck)
+
+            if cfg.get("watermark_column") and cfg["watermark_column"] in ck.columns and len(ck):
+                m = str(ck[cfg["watermark_column"]].max())
+                watermark_value = m if watermark_value is None or m > watermark_value else watermark_value
+
+            if total > PART_THRESHOLD or part > 0:
+                # Bảng lớn → upload từng part
+                part += 1
+                path = minio.upload_dataframe_part(ck, cfg, batch_id, part)
+                minio_parts.append(path)
+                log.info(f"[{cfg['source_id']}] chunk {i}: +{len(ck)} (tổng {total}) → MinIO part {part}")
+                del ck
+                gc.collect()
+            else:
+                # Bảng nhỏ → gom vào RAM như cũ
+                chunks.append(ck)
+                log.info(f"[{cfg['source_id']}] chunk {i}: +{len(ck)} (tổng {total})")
+
+        # Bảng nhỏ — upload 1 file duy nhất
+        if chunks:
+            df = pd.concat(chunks, ignore_index=True)
+            log.info(f"[{cfg['source_id']}] Đọc xong {len(df)} dòng từ {cfg.get('source_table')}")
+            return ExtractResult(
+                dataframe=df, row_count=len(df), checksum=None,
+                watermark_value=watermark_value,
+                source_meta={"query": query, "connection": cfg["connection"]}
+            )
+
+        # Bảng lớn — trả về multi_part
+        first_path = minio_parts[0] if minio_parts else ""
+        return ExtractResult(
+            dataframe=pd.DataFrame(), row_count=total,
+            checksum=None, watermark_value=watermark_value,
+            source_meta={
+                "query": query,
+                "connection": cfg["connection"],
+                "batch_id": batch_id,
+                "minio_path": first_path,
+                "streamed": False,
+                "multi_part": True,
+            }
+        )
     def has_changed(self, last_checksum_or_watermark: Optional[str]) -> bool:
         cfg = self.source_config
         if not cfg.get("incremental") or not cfg.get("watermark_column"):

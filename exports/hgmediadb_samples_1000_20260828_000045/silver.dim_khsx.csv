@@ -1,0 +1,34 @@
+dim_khsx_sk,production_plan_id,plan_name,created_date,production_month,status,created_by
+37693cfc748049e45d87b8c7d8b9aacd,23,Kế Hoạch Sản Xuất tháng 12 - bổ sung 04,2026-01-13 03:28:56.712684,2026-01-01,approved,56
+9bf31c7ff062936a96d3c8bd1f8f2ff3,15,Kế Hoạch Sản Xuất tháng 12 - bổ sung 02,2025-12-23 02:18:50.625982,2025-12-01,approved,56
+c74d97b01eae257e44aa9d5bade97baf,16,Kế Hoạch Sản Xuất tháng 12 - bổ sung 03,2025-12-27 03:34:43.537242,2025-12-01,approved,56
+34173cb38f07f89ddbebc2ac9128303f,30,Kế Hoạch Sản Xuất tháng 2/2026,2026-01-31 07:59:00.7354,2026-02-01,approved,56
+d9d4f495e875a2e075a1a4a6e1b9770f,46,KHSX T5/26 - Bổ sung 01,2026-05-15 09:44:20.192006,2026-05-01,approved,34
+70efdf2ec9b086079795c442636b55fb,17,Kế Hoạch Sản Xuất tháng 11 - bổ sung Zebra,2025-12-30 07:56:41.046874,2025-11-01,approved,56
+1ff1de774005f8da13f42943881c655f,24,Kế Hoạch Sản Xuất tháng 1/2026 - bổ sung 02,2026-01-16 09:30:50.619746,2026-01-16,approved,56
+8f14e45fceea167a5a36dedd4bea2543,7,Kế Hoạch Sản Xuất tháng 9,2025-09-15 12:12:23.353491,2025-09-01,approved,56
+a1d0c6e83f027327d8461063f4ac58a6,42,KHSX T4 - Đặt thêm Jazz An Tuệ,2026-04-20 07:11:33.589308,2026-04-01,approved,34
+45c48cce2e2d7fbdea1afc51c7c6ad26,9,Kế Hoạch Sản Xuất tháng 10,2025-10-28 08:41:31.298227,2025-10-01,approved,56
+d3d9446802a44259755d38e6d163e820,10,Kế Hoạch Sản Xuất tháng 11,2025-11-24 01:52:36.469518,2025-11-01,approved,56
+4e732ced3463d06de0ca9a15b6153677,26,Kế Hoạch Sản Xuất tháng 2/2026 - Jazz FMG,2026-01-21 07:54:45.518658,2026-02-01,approved,56
+1f0e3dad99908345f7439f8ffabdffc4,19,Kế Hoạch Sản Xuất tháng 1/2026,2026-01-05 09:29:47.810476,2026-01-01,approved,56
+c20ad4d76fe97759aa27a0c99bff6710,12,Kế Hoạch Sản Xuất tháng 12,2025-12-03 04:26:20.467227,2025-12-01,approved,56
+a5bfc9e07964f8dddeb95fc584cd965d,37,Kế hoạch sản xuất tháng 3/2026 - bổ sung 02 (Label),2026-03-27 08:39:00.700179,2026-03-01,cancelled,34
+c51ce410c124a10e0db5e4b97fc2af39,13,Kế Hoạch Sản Xuất tháng 12 - bổ sung An Tuệ,2025-12-08 02:38:24.784169,2025-12-01,approved,56
+f7177163c833dff4b38fc8d2872f1ec6,44,KHSX T4 - Đặt thêm Jazz An Tuệ (chuẩn),2026-05-11 02:24:28.789805,2026-04-01,cancelled,34
+a5771bce93e200c36f7cd9dfd0e5deaa,38,Kế hoạch sản xuất tháng 3/2026 - bổ sung 02 (Label),2026-03-27 08:48:07.243746,2026-03-01,approved,34
+1c383cd30b7c298ab50293adfecb7b18,35,Kế Hoạch Sản Xuất tháng 3/2026 - bổ sung 01,2026-03-03 07:09:13.737311,2026-03-01,approved,34
+b6d767d2f8ed5d21a44b0e5886680cb9,22,Kế Hoạch Sản Xuất tháng 1/2026 - bổ sung 01,2026-01-13 03:18:47.406466,2026-01-01,approved,56
+17e62166fc8586dfa4d1bc0e1742c08b,43,KHSX T5 /26,2026-05-08 07:35:26.943899,2026-05-01,cancelled,34
+d67d8ab4f4c10bf22aa353e27879133c,39,Kế Hoạch Sản Xuất tháng 4/2026,2026-04-10 04:40:23.000898,2026-04-01,approved,34
+19ca14e7ea6328a42e0eb13d585e4c22,36,Kế Hoạch Sản Xuất tháng 3/2026,2026-03-03 07:37:43.729895,2026-03-01,approved,34
+c16a5320fa475530d9583c34fd356ef5,31,Kế Hoạch Sản Xuất tháng 2/2026,2026-02-23 04:57:00.405576,2026-02-01,cancelled,34
+d645920e395fedad7bbbed0eca3fe2e0,40,KHSX T4/26 - Label 01,2026-04-16 03:27:41.155523,2026-04-01,approved,34
+3416a75f4cea9109507cacd8e2f2aefc,41,KHSX T3 - Bổ sung Jazz,2026-04-20 07:07:47.623679,2026-03-01,cancelled,34
+67c6a1e7ce56d3d6fa748ab6d9af3fd7,47,KHSX T6 - FMG,2026-06-03 02:07:17.441163,2026-06-01,approved,34
+6c8349cc7260ae62e3b1396831a8398f,45,KHSX T5/26,2026-05-11 08:37:21.74647,2026-05-01,approved,34
+b53b3a3d6ab90ce0268229151c9bde11,55,KHSX T6/01 - Bổ sung 02,2026-06-25 02:38:16.452671,2026-06-01,approved,34
+9a1158154dfa42caddbd0694a4e9bdc8,52,KHSX T6/26 - Neo classical - Label,2026-06-16 06:44:36.397511,2026-06-01,cancelled,34
+642e92efb79421734881b53e1e1b18b6,48,KHSX T6/26,2026-06-08 04:28:44.427698,2026-06-01,approved,34
+d82c8d1619ad8176d665453cfb2e55f0,53,KHSX T6/26 - Bổ sung 01,2026-06-22 08:23:39.092333,2026-06-01,approved,34
+2838023a778dfaecdc212708f721b788,51,KHSX T6/26 - Neo classical - Label,2026-06-16 05:00:22.431636,2026-06-01,cancelled,34

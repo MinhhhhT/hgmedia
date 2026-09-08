@@ -39,7 +39,7 @@ def run_extract(source_config: dict, force: bool = False) -> dict | None:
 
     result = extractor.extract(**extra_kwargs)
 
-
+    # stream thẳng vào staging (không qua MinIO)
     if result.source_meta and result.source_meta.get("streamed"):
         registry.register_extracted(
             source_id=source_id, source_type=source_type, connection_name=connection_name,
@@ -54,14 +54,41 @@ def run_extract(source_config: dict, force: bool = False) -> dict | None:
         logger.info(f"[{source_id}] Extract ra 0 dòng, skip load.")
         return None
 
-    batch_id = minio.make_batch_id(source_id)
-    minio_path = minio.upload_dataframe(result.dataframe, source_config, batch_id)
+    # extractor đã tự upload parts lên MinIO (elastic multi-part)
+    if result.source_meta and result.source_meta.get("minio_path"):
+        batch_id = result.source_meta["batch_id"]
+        minio_path = result.source_meta["minio_path"]
+        registry.register_extracted(
+            source_id=source_id, source_type=source_type, connection_name=connection_name,
+            batch_id=batch_id, minio_path=minio_path, row_count=result.row_count,
+            checksum=result.checksum, watermark_value=result.watermark_value,
+        )
+        logger.info(f"[{source_id}] Extract xong: {result.row_count} dòng -> {minio_path}")
+        return {"source_id": source_id, "batch_id": batch_id, "minio_path": minio_path}
+
+    # upload bình thường (single file)
+    # Nếu extractor đã tự upload MinIO (multi_part=True)
+    if result.source_meta and result.source_meta.get("multi_part"):
+        batch_id = result.source_meta["batch_id"]
+        minio_path = result.source_meta["minio_path"]
+    else:
+        # Upload thông thường (DataFrame nhỏ, 1 file)
+        if result.row_count == 0:
+            log.info(f"[{source_id}] Extract ra 0 dòng, skip load.")
+            return None
+        batch_id = minio.make_batch_id(source_id)
+        minio_path = minio.upload_dataframe(result.dataframe, source_config, batch_id)
+
     registry.register_extracted(
         source_id=source_id, source_type=source_type, connection_name=connection_name,
         batch_id=batch_id, minio_path=minio_path, row_count=result.row_count,
         checksum=result.checksum, watermark_value=result.watermark_value,
     )
-
     logger.info(f"[{source_id}] Extract xong: {result.row_count} dòng -> {minio_path}")
-    return {"source_id": source_id, "batch_id": batch_id, "minio_path": minio_path}
-    
+    return {
+    "source_id": source_id,
+    "batch_id": batch_id,
+    "minio_path": minio_path,
+    "row_count": result.row_count,
+    "multi_part": True
+}

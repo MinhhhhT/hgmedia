@@ -25,6 +25,9 @@ dwh_dbt/target/
 dwh_dbt/logs/
 dbt_packages/
 
+# Keep the Docker Compose environment template versioned.
+!.env.example
+
 # ==========================
 # IDE
 # ==========================
@@ -44,6 +47,7 @@ Thumbs.db
 config/gsheet_service_account.json
 .env
 .env.*
+!.env.example
 
 # ==========================
 # Data
@@ -75,3 +79,5 @@ __pycache__/
 dwh_dbt/target/
 dwh_dbt/logs/
 dbt_packages/
+
+!.env.example

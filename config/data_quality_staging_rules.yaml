@@ -1,0 +1,154 @@
+version: 1
+
+defaults:
+  fail_dag_on_severity: [critical]
+  unexpected_sample_limit: 20
+
+rule_templates:
+  table_has_rows: &table_has_rows
+    id: table_has_rows
+    expectation: ExpectTableRowCountToBeBetween
+    kwargs:
+      min_value: 1
+    severity: critical
+  batch_id_not_null: &batch_id_not_null
+    id: batch_id_not_null
+    expectation: ExpectColumnValuesToNotBeNull
+    kwargs: {column: _batch_id}
+    severity: critical
+  loaded_at_not_null: &loaded_at_not_null
+    id: loaded_at_not_null
+    expectation: ExpectColumnValuesToNotBeNull
+    kwargs: {column: _loaded_at}
+    severity: critical
+  source_id_not_null: &source_id_not_null
+    id: source_id_not_null
+    expectation: ExpectColumnValuesToNotBeNull
+    kwargs: {column: _source_id}
+    severity: critical
+
+groups:
+  database:
+    enabled: true
+    owner: data-team
+    rules:
+      - *table_has_rows
+
+  google_sheet:
+    enabled: true
+    owner: data-team
+    rules:
+      - *table_has_rows
+
+  elastic:
+    enabled: true
+    owner: data-team
+    rules:
+      - *table_has_rows
+
+  api:
+    enabled: true
+    owner: data-team
+    rules:
+      - *table_has_rows
+
+# Rule riêng cho từng source.
+# additional_rules sẽ được nối với rule mặc định của group.
+sources:
+  sale:
+    enabled: true
+    additional_rules:
+      - *batch_id_not_null
+      - *loaded_at_not_null
+      - *source_id_not_null
+      - {id: reporting_period_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: reportingPeriod}, severity: critical}
+      - {id: year_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: year}, severity: critical}
+      - {id: stream_non_negative, expectation: ExpectColumnValuesToBeBetween, kwargs: {column: stream, min_value: 0}, severity: warning}
+      - {id: downloads_non_negative, expectation: ExpectColumnValuesToBeBetween, kwargs: {column: downloads, min_value: 0}, severity: warning}
+      - {id: creations_non_negative, expectation: ExpectColumnValuesToBeBetween, kwargs: {column: creations, min_value: 0}, severity: warning}
+      - {id: revenue_non_negative, expectation: ExpectColumnValuesToBeBetween, kwargs: {column: revenue, min_value: 0}, severity: warning}
+      - {id: rpm_non_negative, expectation: ExpectColumnValuesToBeBetween, kwargs: {column: rpm, min_value: 0}, severity: warning}
+
+  hr_employee:
+    additional_rules:
+      - *batch_id_not_null
+      - *loaded_at_not_null
+      - {id: id_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: id}, severity: critical}
+      - {id: id_unique, expectation: ExpectColumnValuesToBeUnique, kwargs: {column: id}, severity: critical}
+
+  res_partner:
+    additional_rules:
+      - *batch_id_not_null
+      - *loaded_at_not_null
+      - {id: id_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: id}, severity: critical}
+      - {id: id_unique, expectation: ExpectColumnValuesToBeUnique, kwargs: {column: id}, severity: critical}
+
+  purchase_order:
+    additional_rules:
+      - *batch_id_not_null
+      - *loaded_at_not_null
+      - {id: id_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: id}, severity: critical}
+      - {id: id_unique, expectation: ExpectColumnValuesToBeUnique, kwargs: {column: id}, severity: critical}
+      - {id: amount_total_non_negative, expectation: ExpectColumnValuesToBeBetween, kwargs: {column: amount_total, min_value: 0}, severity: warning}
+
+  purchase_order_line:
+    additional_rules:
+      - *batch_id_not_null
+      - *loaded_at_not_null
+      - {id: id_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: id}, severity: critical}
+      - {id: id_unique, expectation: ExpectColumnValuesToBeUnique, kwargs: {column: id}, severity: critical}
+      - {id: order_id_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: order_id}, severity: critical}
+      - {id: product_qty_non_negative, expectation: ExpectColumnValuesToBeBetween, kwargs: {column: product_qty, min_value: 0}, severity: warning}
+      - {id: price_total_non_negative, expectation: ExpectColumnValuesToBeBetween, kwargs: {column: price_total, min_value: 0}, severity: warning}
+
+  sale_order_line:
+    additional_rules:
+      - *batch_id_not_null
+      - *loaded_at_not_null
+      - {id: id_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: id}, severity: critical}
+      - {id: id_unique, expectation: ExpectColumnValuesToBeUnique, kwargs: {column: id}, severity: critical}
+      - {id: order_id_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: order_id}, severity: critical}
+      - {id: price_total_non_negative, expectation: ExpectColumnValuesToBeBetween, kwargs: {column: price_total, min_value: 0}, severity: warning}
+
+  x_project:
+    additional_rules:
+      - *batch_id_not_null
+      - *loaded_at_not_null
+      - {id: id_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: id}, severity: critical}
+      - {id: id_unique, expectation: ExpectColumnValuesToBeUnique, kwargs: {column: id}, severity: critical}
+      - {id: project_name_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: name}, severity: critical}
+
+  network:
+    additional_rules:
+      - *batch_id_not_null
+      - *loaded_at_not_null
+      - {id: id_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: Id}, severity: critical}
+      - {id: id_unique, expectation: ExpectColumnValuesToBeUnique, kwargs: {column: Id}, severity: critical}
+      - {id: name_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: Name}, severity: critical}
+
+  user_departments:
+    additional_rules:
+      - *batch_id_not_null
+      - *loaded_at_not_null
+      - {id: id_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: Id}, severity: critical}
+      - {id: id_unique, expectation: ExpectColumnValuesToBeUnique, kwargs: {column: Id}, severity: critical}
+      - {id: user_id_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: UserId}, severity: critical}
+
+  channel_video_info:
+    additional_rules:
+      - *batch_id_not_null
+      - *loaded_at_not_null
+      - {id: video_id_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: YoutubeVideoId}, severity: critical}
+      - {id: channel_id_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: YoutubeChannelId}, severity: critical}
+      - {id: views_non_negative, expectation: ExpectColumnValuesToBeBetween, kwargs: {column: Views, min_value: 0}, severity: warning}
+
+  channel_video_metric:
+    additional_rules:
+      - *batch_id_not_null
+      - *loaded_at_not_null
+      - {id: composite_id_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: CompositeId}, severity: critical}
+      - {id: composite_id_unique, expectation: ExpectColumnValuesToBeUnique, kwargs: {column: CompositeId}, severity: critical}
+      - {id: video_id_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: YoutubeVideoId}, severity: critical}
+      - {id: metric_date_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: Date}, severity: critical}
+      - {id: views_non_negative, expectation: ExpectColumnValuesToBeBetween, kwargs: {column: Views, min_value: 0}, severity: warning}
+      - {id: estimated_revenue_non_negative, expectation: ExpectColumnValuesToBeBetween, kwargs: {column: EstimatedRevenue, min_value: 0}, severity: warning}

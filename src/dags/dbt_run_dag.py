@@ -18,9 +18,11 @@ from airflow.sensors.external_task import ExternalTaskSensor
 from airflow.operators.python import BranchPythonOperator, PythonOperator
 from airflow.models.param import Param
 
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
+
 PROJECT_ROOT = os.environ.get(
     "DWH_PROJECT_ROOT",
-    "/mnt/d/HG_Project/etl_pipeline/dwh-pipeline-mapping/dwh-pipeline"
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")),
 )
 DBT_DIR = os.path.join(PROJECT_ROOT, "dwh_dbt")
 DBT_BIN = os.environ.get("DBT_BIN", "dbt")
@@ -155,9 +157,9 @@ with DAG(
             poke_interval=60,
             mode="reschedule",
         )
-        wait_csv = ExternalTaskSensor(
-            task_id="wait_el_csv",
-            external_dag_id="el_csv_pipeline",
+        wait_api = ExternalTaskSensor(
+            task_id="wait_el_api",
+            external_dag_id="el_api_pipeline",
             timeout=3600,
             poke_interval=60,
             mode="reschedule",
@@ -193,9 +195,9 @@ with DAG(
             **os.environ,
             "DWH_PG_HOST":     os.environ.get("DWH_PG_HOST", "localhost"),
             "DWH_PG_PORT":     os.environ.get("DWH_PG_PORT", "5432"),
-            "DWH_PG_USER":     os.environ.get("DWH_PG_USER", "hgmedia"),
-            "DWH_PG_PASSWORD": os.environ.get("DWH_PG_PASSWORD", "hgmedia@123"),
-            "DWH_PG_DB":       os.environ.get("DWH_PG_DB", "hgmediadb"),
+            "DWH_PG_USER":     os.environ.get("DWH_PG_USER", "dev"),
+            "DWH_PG_PASSWORD": os.environ.get("DWH_PG_PASSWORD", "Inda1234"),
+            "DWH_PG_DB":       os.environ.get("DWH_PG_DB", "data_warehouse"),
         },
     )
 
@@ -222,7 +224,22 @@ with DAG(
         python_callable=lambda: print("⏭ Bỏ qua dbt test theo yêu cầu."),
     )
 
+    trigger_data_quality = TriggerDagRunOperator(
+        task_id="trigger_data_quality_dbt",
+        trigger_dag_id="data_quality_dbt_pipeline",
+        wait_for_completion=False,
+        reset_dag_run=False,
+        conf={
+            "parent_dag_id": "{{ dag.dag_id }}",
+            "parent_dag_run_id": "{{ dag_run.run_id }}",
+            "layer": "{{ params.layer }}",
+            "selected_models": "{{ params.selected_models | tojson }}",
+        },
+        trigger_rule="none_failed_min_one_success",
+    )
+
     # Workflow
     branch >> [wait_group, prepare_selector]
     wait_group >> prepare_selector
     prepare_selector >> dbt_run >> branch_test >> [dbt_test, skip_test]
+    [dbt_test, skip_test] >> trigger_data_quality
