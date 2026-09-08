@@ -1,5 +1,45 @@
    # DWH Pipeline — Google Sheet + Database → MinIO → Postgres (staging) → dbt (silver/gold)
 
+## Chạy toàn bộ bằng Docker Compose
+
+Yêu cầu: Docker Desktop/Engine đang chạy và PostgreSQL đã được cài trên Windows.
+PostgreSQL phải lắng nghe trên interface cho phép Docker kết nối, firewall phải mở
+cổng 5432, và các user trong `.env` phải có quyền kết nối. Nếu database chưa tồn
+tại, user cần quyền `CREATEDB` để `airflow-init` tự tạo database.
+
+```bash
+cd dwh-pipeline-mapping/dwh-pipeline
+
+# Chỉ cần làm một lần: điền credential thật vào .env hiện có.
+# Có thể tham khảo danh sách biến trong .env.example.
+
+docker compose up -d --build
+docker compose ps
+```
+
+Ở lần chạy đầu, Compose sẽ tự build image Airflow có dbt, ODBC Driver 17 và
+các Python package; migrate metadata database; tạo tài khoản Airflow; tải
+`dbt_utils`; khởi tạo schema trên PostgreSQL Windows; đồng thời tạo bucket MinIO
+`raw-bronze`.
+
+Các endpoint mặc định trên host:
+
+- Airflow: http://localhost:8081
+- MinIO API: http://localhost:9000
+- MinIO Console: http://localhost:9003
+- DWH và Airflow metadata: PostgreSQL trên Windows, mặc định cổng 5432
+
+Các port Docker có thể đổi bằng `AIRFLOW_EXPOSE_PORT`, `MINIO_API_EXPOSE_PORT`
+và `MINIO_CONSOLE_EXPOSE_PORT` trong `.env`.
+
+```bash
+# Theo dõi quá trình init/build và các service chính
+docker compose logs -f airflow-init minio-init airflow-api-server airflow-scheduler
+
+# Dừng nhưng giữ nguyên dữ liệu
+docker compose down
+```
+
 Pipeline EL (Extract-Load) bằng Python cho 2 nhóm nguồn hiện tại (Google Sheet, Database),
 kết hợp dbt để transform. **Elasticsearch tạm bỏ qua**, sẽ bổ sung sau theo cùng pattern
 (`src/extractors/elasticsearch_extractor.py` + `config/elasticsearch_sources.yaml`).

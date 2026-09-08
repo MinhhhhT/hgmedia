@@ -5,6 +5,8 @@ models:
     columns:
       - name: dim_isrc_sk
         tests: [unique, not_null]
+      - name: isrc
+        tests: [unique, not_null]
   - name: dim_ar
     columns:
       - name: dim_ar_sk
@@ -61,6 +63,11 @@ models:
     columns:
       - name: dim_repository_sk
         tests: [unique, not_null]
+      - name: repository_type
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Sản xuất', 'Thu mua']
   - name: dim_resource
     columns:
       - name: dim_resource_sk

@@ -1,90 +1,66 @@
 {{ config(materialized='table') }}
 
-with distributed_music as (
+-- Grain: one row per stock resource whose current dim_stock status is "Tồn kho".
+-- Inventory age starts at dim_stock.stock_stored_date; resources without a valid
+-- stored date remain in the mart and are assigned to a separate age bucket.
+
+with inventory_stock as (
     select
         hg_stock_id
-        , max(distribution_date)::date as last_distribution_date
-    from {{ ref('fact_distribution') }}
-    where nullif(hg_stock_id, '') is not null
-        and left(hg_stock_id, 4) = 'HGFA'
-    group by hg_stock_id
+        , name
+        , stock_link
+        , stock_stored_date::date as inventory_start_date
+        , status
+    from {{ ref('dim_stock') }}
+    where status = 'Tồn kho'
+        and nullif(trim(hg_stock_id), '') is not null
 ),
 
-last_used as (
-    select
-        fe.hg_stock_id
-        , max(dv.published_date)::date as last_published_date
-    from {{ ref('fact_editing') }} fe
-    inner join {{ ref('bridge_bt_vid') }} bv
-        on bv.editing_code = fe.editing_code
-    inner join {{ ref('dim_video') }} dv
-        on dv.video_id = bv.video_id
-    where nullif(fe.hg_stock_id, '') is not null
-        and left(fe.hg_stock_id, 4) = 'HGFA'
-        and nullif(fe.editing_code, '') is not null
-        and nullif(bv.video_id, '') is not null
-        and dv.published_date is not null
-    group by fe.hg_stock_id
-),
-
+-- Aggregate to the mart grain because dim_resources can contain duplicate HG IDs.
 score_by_stock as (
     select
-        st.hg_stock_id
-        , max(dr.acceptance_score) as acceptance_score
-    from {{ ref('dim_stock') }} st
-    left join {{ ref('fact_label_operation') }} flo
-        on nullif(st.isrc, '') is not null
-        and flo.isrc = st.isrc
-    left join {{ ref('dim_resource') }} dr
-        on dr.resource_id = flo.resource_id
-    where nullif(st.hg_stock_id, '') is not null
-        and left(st.hg_stock_id, 4) = 'HGFA'
-    group by st.hg_stock_id
+        hg_stock_id
+        , max(acceptance_score) as acceptance_score
+    from {{ ref('dim_resources') }}
+    where nullif(trim(hg_stock_id), '') is not null
+    group by hg_stock_id
 ),
 
 base as (
     select
-        dm.hg_stock_id
-        , dm.last_distribution_date
-        , lu.last_published_date
-        , coalesce(
-            lu.last_published_date
-            , dm.last_distribution_date
-          ) as inventory_start_date
-        , (
-            current_date
-            - coalesce(
-                lu.last_published_date
-                , dm.last_distribution_date
-              )
-          )::int as inventory_age_days
-        , sbs.acceptance_score
-    from distributed_music dm
-    left join last_used lu
-        on lu.hg_stock_id = dm.hg_stock_id
-    left join score_by_stock sbs
-        on sbs.hg_stock_id = dm.hg_stock_id
-    where coalesce(
-        lu.last_published_date
-        , dm.last_distribution_date
-    ) is not null
+        st.hg_stock_id
+        , st.name
+        , st.stock_link
+        , st.status
+        , st.inventory_start_date
+        , case
+            when st.inventory_start_date is not null
+                then (current_date - st.inventory_start_date)::int
+          end as inventory_age_days
+        , score.acceptance_score
+    from inventory_stock st
+    left join score_by_stock score
+        on score.hg_stock_id = st.hg_stock_id
 )
 
 select
     hg_stock_id
-    , last_distribution_date
-    , last_published_date
+    , name
+    , stock_link
+    , status
     , inventory_start_date
     , inventory_age_days
     , case
-        when inventory_age_days <= 30 then 1
-        when inventory_age_days <= 60 then 2
-        else 3
+        when inventory_age_days between 0 and 30 then 1
+        when inventory_age_days between 31 and 60 then 2
+        when inventory_age_days > 60 then 3
+        else 4
       end as inventory_age_sort
     , case
-        when inventory_age_days <= 30 then 'Tồn kho 0-30 ngày'
-        when inventory_age_days <= 60 then 'Tồn kho 30-60 ngày'
-        else 'Tồn kho > 60 ngày'
+        when inventory_age_days between 0 and 30 then 'Tồn kho 0-30 ngày'
+        when inventory_age_days between 31 and 60 then 'Tồn kho 30-60 ngày'
+        when inventory_age_days > 60 then 'Tồn kho > 60 ngày'
+        else 'Khác/Chưa có ngày'
       end as inventory_age_group
     , acceptance_score
     , case
@@ -101,11 +77,6 @@ select
         when acceptance_score >= 8.75 then '9 điểm'
         when acceptance_score >= 8.25 then '8.5 điểm'
         when acceptance_score >= 7.75 then '8 điểm'
-        else 'Khác/chưa có điểm'
+        else 'Khác/Chưa có điểm'
       end as score_group
-    , case
-        when last_published_date is not null then 'Đã từng sử dụng'
-        else 'Chưa từng sử dụng'
-      end as usage_status
 from base
-where inventory_age_days >= 0

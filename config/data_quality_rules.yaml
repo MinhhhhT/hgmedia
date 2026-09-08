@@ -1,35 +1,226 @@
 version: 1
 
-data_quality_rules:
-  partners:
+defaults:
+  fail_dag_on_severity: [critical]
+  unexpected_sample_limit: 20
+
+rule_templates:
+  table_has_rows: &table_has_rows
+    id: table_has_rows
+    expectation: ExpectTableRowCountToBeBetween
+    kwargs: {min_value: 1}
+    severity: warning
+  primary_key_not_null: &primary_key_not_null
+    id: primary_key_not_null
+    expectation: ExpectColumnValuesToNotBeNull
+    severity: critical
+  primary_key_unique: &primary_key_unique
+    id: primary_key_unique
+    expectation: ExpectColumnValuesToBeUnique
+    severity: critical
+  silver_table: &silver_table
     enabled: true
-    target_table: staging.partners
-    fail_pipeline_on:
-      - critical
+    layer: silver
+    owner: data-team
+    rules: [*table_has_rows]
+  gold_table: &gold_table
+    enabled: true
+    layer: gold
+    owner: analytics
+    rules: [*table_has_rows]
 
+tables:
+  silver.bridge_bt_vid: {<<: *silver_table, dbt_model: bridge_bt_vid}
+  silver.dim_artist_distro: {<<: *silver_table, dbt_model: dim_artist_distro}
+  silver.dim_editing: {<<: *silver_table, dbt_model: dim_editing}
+  silver.dim_partners: {<<: *silver_table, dbt_model: dim_partners}
+  silver.dim_platform: {<<: *silver_table, dbt_model: dim_platform}
+  silver.dim_purchased_resource: {<<: *silver_table, dbt_model: dim_purchased_resource}
+  silver.dim_resource_before_odoo: {<<: *silver_table, dbt_model: dim_resource_before_odoo}
+  silver.dim_resources:
+    <<: *silver_table
+    dbt_model: dim_resources
+    rules: [*table_has_rows, {<<: *primary_key_not_null, kwargs: {column: dim_resources_sk}}, {<<: *primary_key_unique, kwargs: {column: dim_resources_sk}}, {id: resource_source_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: resource_source}, severity: critical}, {id: acceptance_score_non_negative, expectation: ExpectColumnValuesToBeBetween, kwargs: {column: acceptance_score, min_value: 0}, severity: warning}, {id: acceptance_cost_non_negative, expectation: ExpectColumnValuesToBeBetween, kwargs: {column: acceptance_cost, min_value: 0}, severity: warning}]
+  silver.dim_usd: {<<: *silver_table, dbt_model: dim_usd}
+  silver.dim_video: {<<: *silver_table, dbt_model: dim_video}
+  silver.fact_evaluation_assignment: {<<: *silver_table, dbt_model: fact_evaluation_assignment}
+  silver.fact_music_evaluation: {<<: *silver_table, dbt_model: fact_music_evaluation}
+  silver.fact_purchase_cost: {<<: *silver_table, dbt_model: fact_purchase_cost}
+  silver.fact_revenue_by_resources:
+    <<: *silver_table
+    dbt_model: fact_revenue_by_resources
+    rules: [*table_has_rows, {id: revenue_id_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: revenue_id}, severity: critical}, {id: video_id_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: video_id}, severity: critical}, {id: resource_id_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: resource_id}, severity: critical}, {id: recorded_date_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: recorded_date}, severity: critical}, {id: revenue_amount_non_negative, expectation: ExpectColumnValuesToBeBetween, kwargs: {column: revenue_amount, min_value: 0}, severity: warning}, {id: view_non_negative, expectation: ExpectColumnValuesToBeBetween, kwargs: {column: view, min_value: 0}, severity: warning}]
+  silver.fact_revenue_distro: {<<: *silver_table, dbt_model: fact_revenue_distro}
+  silver.fact_revenue_stream_distro: {<<: *silver_table, dbt_model: fact_revenue_stream_distro}
+  silver.fact_revenue_view_youtube: {<<: *silver_table, dbt_model: fact_revenue_view_youtube}
+  silver.fact_revenue_yt: {<<: *silver_table, dbt_model: fact_revenue_yt}
+  silver.fact_view_stream_distro: {<<: *silver_table, dbt_model: fact_view_stream_distro}
+  silver.fact_view_yt: {<<: *silver_table, dbt_model: fact_view_yt}
+  silver.int_excluded_stock_codes: {<<: *silver_table, dbt_model: int_excluded_stock_codes}
+  silver.int_stock_video:
+    <<: *silver_table
+    dbt_model: int_stock_video
+    rules: [*table_has_rows, {id: stock_id_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: hg_stock_id}, severity: critical}, {id: video_id_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: video_id}, severity: critical}]
+
+  silver.dim_ar:
+    <<: *silver_table
+    dbt_model: dim_ar
+    rules: [*table_has_rows, {<<: *primary_key_not_null, kwargs: {column: dim_ar_sk}}, {<<: *primary_key_unique, kwargs: {column: dim_ar_sk}}]
+  silver.dim_artist:
+    <<: *silver_table
+    dbt_model: dim_artist
+    rules: [*table_has_rows, {<<: *primary_key_not_null, kwargs: {column: dim_artist_sk}}, {<<: *primary_key_unique, kwargs: {column: dim_artist_sk}}]
+  silver.dim_channel:
+    <<: *silver_table
+    dbt_model: dim_channel
+    rules: [*table_has_rows, {<<: *primary_key_not_null, kwargs: {column: dim_channel_sk}}, {<<: *primary_key_unique, kwargs: {column: dim_channel_sk}}, {id: channel_id_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: channel_id}, severity: critical}]
+  silver.dim_company:
+    <<: *silver_table
+    dbt_model: dim_company
+    rules: [*table_has_rows, {<<: *primary_key_not_null, kwargs: {column: dim_company_sk}}, {<<: *primary_key_unique, kwargs: {column: dim_company_sk}}]
+  silver.dim_company_stock:
+    <<: *silver_table
+    dbt_model: dim_company_stock
+    rules: [*table_has_rows, {<<: *primary_key_not_null, kwargs: {column: dim_company_stock_sk}}, {<<: *primary_key_unique, kwargs: {column: dim_company_stock_sk}}]
+  silver.dim_department:
+    <<: *silver_table
+    dbt_model: dim_department
+    rules: [*table_has_rows, {<<: *primary_key_not_null, kwargs: {column: dim_department_sk}}, {<<: *primary_key_unique, kwargs: {column: dim_department_sk}}]
+  silver.dim_distributed_employee:
+    <<: *silver_table
+    dbt_model: dim_distributed_employee
+    rules: [*table_has_rows, {<<: *primary_key_not_null, kwargs: {column: dim_distributed_employee_sk}}, {<<: *primary_key_unique, kwargs: {column: dim_distributed_employee_sk}}]
+  silver.dim_isrc:
+    <<: *silver_table
+    dbt_model: dim_isrc
+    rules: [*table_has_rows, {<<: *primary_key_not_null, kwargs: {column: dim_isrc_sk}}, {<<: *primary_key_unique, kwargs: {column: dim_isrc_sk}}]
+  silver.dim_khsx:
+    <<: *silver_table
+    dbt_model: dim_khsx
+    rules: [*table_has_rows, {<<: *primary_key_not_null, kwargs: {column: dim_khsx_sk}}, {<<: *primary_key_unique, kwargs: {column: dim_khsx_sk}}]
+  silver.dim_net:
+    <<: *silver_table
+    dbt_model: dim_net
+    rules: [*table_has_rows, {<<: *primary_key_not_null, kwargs: {column: dim_net_sk}}, {<<: *primary_key_unique, kwargs: {column: dim_net_sk}}]
+  silver.dim_order_employee:
+    <<: *silver_table
+    dbt_model: dim_order_employee
+    rules: [*table_has_rows, {<<: *primary_key_not_null, kwargs: {column: dim_order_employee_sk}}, {<<: *primary_key_unique, kwargs: {column: dim_order_employee_sk}}]
+  silver.dim_po:
+    <<: *silver_table
+    dbt_model: dim_po
+    rules: [*table_has_rows, {<<: *primary_key_not_null, kwargs: {column: dim_po_sk}}, {<<: *primary_key_unique, kwargs: {column: dim_po_sk}}]
+  silver.dim_project:
+    <<: *silver_table
+    dbt_model: dim_project
+    rules: [*table_has_rows, {<<: *primary_key_not_null, kwargs: {column: dim_project_sk}}, {<<: *primary_key_unique, kwargs: {column: dim_project_sk}}, {id: project_id_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: project_id}, severity: critical}]
+  silver.dim_project_stock:
+    <<: *silver_table
+    dbt_model: dim_project_stock
+    rules: [*table_has_rows, {<<: *primary_key_not_null, kwargs: {column: dim_project_stock_sk}}, {<<: *primary_key_unique, kwargs: {column: dim_project_stock_sk}}, {id: project_id_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: project_id}, severity: critical}]
+  silver.dim_repository:
+    <<: *silver_table
+    dbt_model: dim_repository
+    rules: [*table_has_rows, {<<: *primary_key_not_null, kwargs: {column: dim_repository_sk}}, {<<: *primary_key_unique, kwargs: {column: dim_repository_sk}}, {id: repository_id_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: repository_id}, severity: critical}]
+  silver.dim_resource:
+    <<: *silver_table
+    dbt_model: dim_resource
+    rules: [*table_has_rows, {<<: *primary_key_not_null, kwargs: {column: dim_resource_sk}}, {<<: *primary_key_unique, kwargs: {column: dim_resource_sk}}]
+  silver.dim_so:
+    <<: *silver_table
+    dbt_model: dim_so
+    rules: [*table_has_rows, {<<: *primary_key_not_null, kwargs: {column: dim_so_sk}}, {<<: *primary_key_unique, kwargs: {column: dim_so_sk}}]
+  silver.dim_stock:
+    <<: *silver_table
+    dbt_model: dim_stock
+    owner: master-data
+    rules: [*table_has_rows, {<<: *primary_key_not_null, kwargs: {column: dim_stock_sk}}, {<<: *primary_key_unique, kwargs: {column: dim_stock_sk}}, {id: stock_id_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: hg_stock_id}, severity: critical}, {id: resource_age_non_negative, expectation: ExpectColumnValuesToBeBetween, kwargs: {column: resource_age_days, min_value: 0}, severity: warning}]
+  silver.dim_sub_project:
+    <<: *silver_table
+    dbt_model: dim_sub_project
+    rules: [*table_has_rows, {<<: *primary_key_not_null, kwargs: {column: dim_sub_project_sk}}, {<<: *primary_key_unique, kwargs: {column: dim_sub_project_sk}}, {id: sub_project_id_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: sub_project_id}, severity: critical}]
+  silver.dim_subproject_stock:
+    <<: *silver_table
+    dbt_model: dim_subproject_stock
+    rules: [*table_has_rows, {<<: *primary_key_not_null, kwargs: {column: dim_subproject_stock_sk}}, {<<: *primary_key_unique, kwargs: {column: dim_subproject_stock_sk}}, {id: sub_project_id_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: sub_project_id}, severity: critical}]
+  silver.fact_artist_assignment:
+    <<: *silver_table
+    dbt_model: fact_artist_assignment
+    rules: [*table_has_rows, {<<: *primary_key_not_null, kwargs: {column: fact_artist_assignment_sk}}, {<<: *primary_key_unique, kwargs: {column: fact_artist_assignment_sk}}]
+  silver.fact_distribution:
+    <<: *silver_table
+    dbt_model: fact_distribution
+    rules: [*table_has_rows, {<<: *primary_key_not_null, kwargs: {column: fact_distribution_sk}}, {<<: *primary_key_unique, kwargs: {column: fact_distribution_sk}}]
+  silver.fact_editing:
+    <<: *silver_table
+    dbt_model: fact_editing
+    rules: [*table_has_rows, {<<: *primary_key_not_null, kwargs: {column: fact_editing_sk}}, {<<: *primary_key_unique, kwargs: {column: fact_editing_sk}}]
+  silver.fact_khsx_detail:
+    <<: *silver_table
+    dbt_model: fact_khsx_detail
+    rules: [*table_has_rows, {<<: *primary_key_not_null, kwargs: {column: fact_khsx_detail_sk}}, {<<: *primary_key_unique, kwargs: {column: fact_khsx_detail_sk}}]
+  silver.fact_label_operation:
+    <<: *silver_table
+    dbt_model: fact_label_operation
+    rules: [*table_has_rows, {<<: *primary_key_not_null, kwargs: {column: fact_label_operation_sk}}, {<<: *primary_key_unique, kwargs: {column: fact_label_operation_sk}}]
+  silver.fact_po_detail:
+    <<: *silver_table
+    dbt_model: fact_po_detail
+    rules: [*table_has_rows, {<<: *primary_key_not_null, kwargs: {column: fact_po_detail_sk}}, {<<: *primary_key_unique, kwargs: {column: fact_po_detail_sk}}]
+  silver.fact_so_detail:
+    <<: *silver_table
+    dbt_model: fact_so_detail
+    rules: [*table_has_rows, {<<: *primary_key_not_null, kwargs: {column: fact_so_detail_sk}}, {<<: *primary_key_unique, kwargs: {column: fact_so_detail_sk}}]
+  silver.fact_youtube_operation:
+    <<: *silver_table
+    dbt_model: fact_youtube_operation
+    rules: [*table_has_rows, {<<: *primary_key_not_null, kwargs: {column: fact_youtube_operation_sk}}, {<<: *primary_key_unique, kwargs: {column: fact_youtube_operation_sk}}]
+
+  gold.fact_hao_hut:
+    <<: *gold_table
+    dbt_model: fact_hao_hut
+    rules: [*table_has_rows, {id: resource_id_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: resource_id}, severity: critical}, {id: quantity_non_negative, expectation: ExpectColumnValuesToBeBetween, kwargs: {column: so_luong, min_value: 0}, severity: warning}]
+  gold.mart_avg_sla_ord_disribution:
+    <<: *gold_table
+    dbt_model: mart_avg_sla_ord_disribution
+    rules: [*table_has_rows, {id: repository_id_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: repository_id}, severity: critical}, {id: resource_count_non_negative, expectation: ExpectColumnValuesToBeBetween, kwargs: {column: number_resources, min_value: 0}, severity: warning}, {id: sla_non_negative, expectation: ExpectColumnValuesToBeBetween, kwargs: {column: sla_ord_distribution, min_value: 0}, severity: warning}]
+  gold.mart_resource_usage:
+    <<: *gold_table
+    dbt_model: mart_resource_usage
+    rules: [*table_has_rows, {id: resource_id_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: resource_id}, severity: critical}, {id: used_video_count_non_negative, expectation: ExpectColumnValuesToBeBetween, kwargs: {column: used_video_count, min_value: 0}, severity: warning}, {id: resource_age_non_negative, expectation: ExpectColumnValuesToBeBetween, kwargs: {column: resource_age_days, min_value: 0}, severity: warning}]
+  gold.mart_resources_video_channel:
+    <<: *gold_table
+    dbt_model: mart_resources_video_channel
+    rules: [*table_has_rows, {id: resource_id_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: resource_id}, severity: critical}, {id: link_video_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: link_video}, severity: critical}, {id: position_non_negative, expectation: ExpectColumnValuesToBeBetween, kwargs: {column: position, min_value: 0}, severity: warning}]
+  gold.mart_team_usage:
+    <<: *gold_table
+    dbt_model: mart_team_usage
+    rules: [*table_has_rows, {<<: *primary_key_not_null, kwargs: {column: mart_team_usage_sk}}, {<<: *primary_key_unique, kwargs: {column: mart_team_usage_sk}}, {id: team_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: team}, severity: critical}, {id: distributed_non_negative, expectation: ExpectColumnValuesToBeBetween, kwargs: {column: distributed_resources, min_value: 0}, severity: warning}, {id: usage_non_negative, expectation: ExpectColumnValuesToBeBetween, kwargs: {column: usage_resources, min_value: 0}, severity: warning}]
+  gold.mart_ton_kho:
+    <<: *gold_table
+    dbt_model: mart_ton_kho
+    rules: [*table_has_rows, {id: stock_id_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: hg_stock_id}, severity: critical}, {id: inventory_age_non_negative, expectation: ExpectColumnValuesToBeBetween, kwargs: {column: inventory_age_days, min_value: 0}, severity: warning}, {id: acceptance_score_non_negative, expectation: ExpectColumnValuesToBeBetween, kwargs: {column: acceptance_score, min_value: 0}, severity: warning}]
+  gold.mart_video_performance_monthly:
+    <<: *gold_table
+    dbt_model: mart_video_performance_monthly
+    rules: [*table_has_rows, {id: video_id_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: video_id}, severity: critical}, {id: revenue_month_not_null, expectation: ExpectColumnValuesToNotBeNull, kwargs: {column: revenue_month}, severity: critical}, {id: view_count_non_negative, expectation: ExpectColumnValuesToBeBetween, kwargs: {column: view_count, min_value: 0}, severity: warning}, {id: revenue_amount_non_negative, expectation: ExpectColumnValuesToBeBetween, kwargs: {column: revenue_amount, min_value: 0}, severity: warning}]
+  gold.mart_resource_channel:
+    <<: *gold_table
+    dbt_model: mart_resource_channel
     rules:
-      - id: partners_row_count
-        expectation: expect_table_row_count_to_be_between
-        kwargs:
-          min_value: 1
+      - id: table_has_rows
+        expectation: ExpectTableRowCountToBeBetween
+        kwargs: {min_value: 1}
         severity: critical
-
-      - id: partners_stt_not_null
-        expectation: expect_column_values_to_not_be_null
-        kwargs:
-          column: STT
+      - id: resource_id_not_null
+        expectation: ExpectColumnValuesToNotBeNull
+        kwargs: {column: resource_id}
         severity: critical
-
-      - id: partners_stt_unique
-        expectation: expect_column_values_to_be_unique
-        kwargs:
-          column: STT
-        severity: warning
-
-      - id: partners_project_allowed
-        expectation: expect_column_values_to_be_in_set
-        kwargs:
-          column: Dự án
-          value_set: ["Deep House", "Relax", "Lofi", "Phúc âm"]
-          mostly: 0.95
+      - id: resource_id_unique
+        expectation: ExpectColumnValuesToBeUnique
+        kwargs: {column: resource_id}
+        severity: critical
+      - id: revenue_non_negative
+        expectation: ExpectColumnValuesToBeBetween
+        kwargs: {column: revenue, min_value: 0}
         severity: warning

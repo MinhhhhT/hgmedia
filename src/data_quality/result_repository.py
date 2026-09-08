@@ -21,6 +21,11 @@ class DataQualityRepository:
         batch_id: str | None,
         status: str,
         config_hash: str | None,
+        dbt_model: str | None = None,
+        dbt_layer: str | None = None,
+        parent_dag_id: str | None = None,
+        parent_dag_run_id: str | None = None,
+        records_checked: int | None = None,
     ) -> None:
         query = text("""
             INSERT INTO meta.dq_validation_runs (
@@ -32,7 +37,12 @@ class DataQualityRepository:
                 batch_id,
                 status,
                 started_at,
-                config_hash
+                config_hash,
+                dbt_model,
+                dbt_layer,
+                parent_dag_id,
+                parent_dag_run_id,
+                records_checked
             )
             VALUES (
                 CAST(:validation_run_id AS uuid),
@@ -43,7 +53,12 @@ class DataQualityRepository:
                 :batch_id,
                 :status,
                 :started_at,
-                :config_hash
+                :config_hash,
+                :dbt_model,
+                :dbt_layer,
+                :parent_dag_id,
+                :parent_dag_run_id,
+                :records_checked
             )
         """)
 
@@ -58,6 +73,11 @@ class DataQualityRepository:
                 "status": status,
                 "started_at": datetime.now(),
                 "config_hash": config_hash,
+                "dbt_model": dbt_model,
+                "dbt_layer": dbt_layer,
+                "parent_dag_id": parent_dag_id,
+                "parent_dag_run_id": parent_dag_run_id,
+                "records_checked": records_checked,
             })
 
     def save_rule_results(
@@ -129,6 +149,8 @@ class DataQualityRepository:
         passed_rules: int,
         failed_rules: int,
         error_message: str | None = None,
+        records_checked: int | None = None,
+        duration_seconds: float | None = None,
     ) -> None:
         success_percent = (
             round((passed_rules / total_rules) * 100, 2)
@@ -145,7 +167,15 @@ class DataQualityRepository:
                 failed_rules = :failed_rules,
                 success_percent = :success_percent,
                 finished_at = :finished_at,
-                error_message = :error_message
+                error_message = :error_message,
+                records_checked = COALESCE(
+                    :records_checked,
+                    records_checked
+                ),
+                duration_seconds = COALESCE(
+                    :duration_seconds,
+                    duration_seconds
+                )
             WHERE validation_run_id = CAST(:validation_run_id AS uuid)
         """)
 
@@ -159,4 +189,44 @@ class DataQualityRepository:
                 "success_percent": success_percent,
                 "finished_at": datetime.now(),
                 "error_message": error_message,
+                "records_checked": records_checked,
+                "duration_seconds": duration_seconds,
             })
+
+    def save_unexpected_samples(
+        self,
+        validation_run_id: str,
+        rule_id: str,
+        rows: list[dict],
+        limit: int = 20,
+    ) -> None:
+        if not rows:
+            return
+
+        query = text("""
+            INSERT INTO meta.dq_unexpected_samples (
+                validation_run_id,
+                rule_id,
+                sample_no,
+                row_data
+            )
+            VALUES (
+                CAST(:validation_run_id AS uuid),
+                :rule_id,
+                :sample_no,
+                CAST(:row_data AS jsonb)
+            )
+        """)
+
+        payload = [
+            {
+                "validation_run_id": validation_run_id,
+                "rule_id": rule_id,
+                "sample_no": index,
+                "row_data": json.dumps(row, ensure_ascii=False, default=str),
+            }
+            for index, row in enumerate(rows[:limit], start=1)
+        ]
+
+        with self.engine.begin() as conn:
+            conn.execute(query, payload)

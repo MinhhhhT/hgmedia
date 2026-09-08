@@ -1,0 +1,19 @@
+version: 2
+
+models:
+  - name: fact_powerbi_unified
+    description: >-
+      Single narrow metric fact table for Power BI. Different business grains
+      are stacked and identified by grain_type; metric_name defines the
+      additive value stored in metric_value.
+    columns:
+      - name: fact_key
+        tests: [not_null, unique]
+      - name: metric_date
+        tests: [not_null]
+      - name: grain_type
+        tests: [not_null]
+      - name: metric_name
+        tests: [not_null]
+      - name: metric_value
+        tests: [not_null]

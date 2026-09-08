@@ -1,0 +1,61 @@
+dim_order_employee_sk,order_employee_id,employee_id,department_id,employee_name,team_name,position,company_id
+4f5c422f4d49a5a807eda27434231040,3298,4680,,A&R Trà Giang,,A&R,8
+bd4c9ab730f5513206b999ec0d90d1fb,179,161,121,Nguyễn Quỳnh Anh,,Business Development,3
+7ef605fc8dba5425d6965fbd4c8fbe1f,168,150,42,Nguyễn Diệu Linh,,Assistant,2
+1679091c5a880faf6fb5e6087eb1b2dc,,6,,,,,
+c0c7c76d30bd3dcaefc96f40275bdc0a,45,50,27,Lê Võ Đình Tuấn,,A&R,8
+97416ac0f58056947e2eb5d5d253d4f2,569,2407,160,Nguyễn Phương Nga,,Manager Assistant,9
+db182d2552835bec774847e06406bfa2,,4708,,,,,
+6c8349cc7260ae62e3b1396831a8398f,40,45,24,Lê Tùng Lâm,,A&R HN,8
+fc152e73692bc3c934d248f639d9e963,3317,4687,,Phạm Khánh Linh,,,14
+67c6a1e7ce56d3d6fa748ab6d9af3fd7,42,47,27,Trần Thiên Phúc,,A&R,8
+9f61408e3afb633e50cdf1b20de6f466,51,56,26,Nguyễn Diệu Hương,,Trợ lý trưởng phòng SXN HN,8
+6c4b761a28b734fe93831e3fb400ce87,175,157,130,Nguyễn Thị Trà My,,Assistant,3
+a5771bce93e200c36f7cd9dfd0e5deaa,33,38,23,Trần Thái Bảo Hân,,Quản lý sản xuất,8
+0777d5c17d4066b82ab86dff8a46af6f,,163,,,,,
+3416a75f4cea9109507cacd8e2f2aefc,36,41,24,Hà Tiến Trung,,A&R HN,8
+9a1158154dfa42caddbd0694a4e9bdc8,47,52,27,Nguyễn Hoài Thanh,,A&R,8
+03afdbd66e7929b125f8597834fa83a4,58,63,30,Nguyễn Thị Thúy Quỳnh,,Nhân viên BD,10
+7f39f8317fbdb1988ef4c628eba02591,56,61,30,Nguyễn Quế Anh,,Nhân viên BD,10
+82aa4b0af34c2313a562076992e50aa3,180,162,121,Phạm Hoàng Giang,,Business Development,3
+ffedf5be3a86e2ee281d54cdc97bc1cf,665,2302,163,Nguyễn Thu Phương,,HR Generalist,1
+f457c545a9ded88f18ecee47145a72c0,44,49,27,Nguyễn Minh Xuân Ái,,A&R,8
+44f683a84163b3523afe57c2e008bc8c,57,62,30,Lê Diễm Quỳnh,,Nhân viên BD,10
+fc490ca45c00b1249bbe3554a4fdf6fb,60,65,30,Vương Vũ Thuý Hiền,,Nhân viên BD,10
+19ca14e7ea6328a42e0eb13d585e4c22,31,36,23,Lê Kim Ngọc,,Quản lý sản xuất,8
+1177967c7957072da3dc1db4ceb30e7a,653,2290,163,Đinh Thị Hằng,,Department Manager,1
+7b4773c039d539af17c883eb9283dd14,698,2335,163,Phạm Thu Huyền,,HRGA Generalist,1
+7cac11e2f46ed46c339ec3d569853759,455,2408,160,Nguyễn Thị Ngọc Ánh,,Manager Assistant,9
+ea5d2f1c4608232e07d3aa3d998e5135,59,64,30,Ngô Tuyết Mai,,Nhân viên BD,10
+722caafb4825ef5d8670710fa29087cf,3286,4671,163,Nguyễn Phương Thảo,,HR Generalist,1
+eed5af6add95a9a6f1252739b1ad8c24,3229,439,30,Võ Hồng Hải,,Business Development Officer,10
+ab3f9cab224141f869b28de5d0674580,3271,4655,,Phan Nam Trân,,Creative Leader,7
+92cc227532d17e56e07902b254dfad10,110,92,42,Vũ Thu Hà,,Assistant,2
+9a96876e2f8f3dc4f3cf45f02c61c0c1,3226,447,156,Mai Thanh Trúc,,Assistant,1
+f08b7ac8aa30a2a9ab34394e200e1a71,3236,4638,163,Trần Ánh Ngọc,,HR Generalist Intern,1
+426f990b332ef8193a61cc90516c1245,681,2318,163,Nguyễn Lan Anh,,HR Generalist,1
+b53b3a3d6ab90ce0268229151c9bde11,50,55,25,Lê Tiến Mạnh,,Producer In House,8
+250dd56814ad7c50971ee4020519c6f5,3233,4647,27,Trần Nguyễn Minh Thư,,A&R,8
+82ba9d6eee3f026be339bb287651c3d8,3297,4677,,Đinh Thị Minh Châu,,Trợ lý BOD,14
+642e92efb79421734881b53e1e1b18b6,43,48,27,Lâm Hoàng Ân,,A&R,8
+d9d4f495e875a2e075a1a4a6e1b9770f,41,46,27,Cao Bá Hưng,,Trưởng phòng SXN SG,8
+a684eceee76fc522773286a895bc8436,49,54,25,Nghiêm Đức Tài,,Producer In House,8
+97788494d0cb9c4ad37af9a76290b361,3296,4679,,Phạm Thị Khánh Linh,,Nhân viên Digital Marketing,14
+ac4d17530106c3e3c2fb5e2dad0e51b7,3295,4678,,Nguyễn Thị Ánh Tuyết,,Chuyên viên Digital Marketing,14
+a1d0c6e83f027327d8461063f4ac58a6,37,42,24,Doãn Minh Hiếu,,A&R HN,8
+b73ce398c39f506af761d2277d853a92,178,160,121,Doãn Bảo Ngọc,,Business Development,3
+ea6979872125d5acbac6068f186a0359,3294,4676,,Nguyễn Hương Giang,,Trợ lý cấp cao BOD,14
+17e62166fc8586dfa4d1bc0e1742c08b,38,43,24,Nguyễn Lâm Tùng,,A&R HN,8
+dd03de08bfdff4d8ab01117276564cc7,3395,4724,30,Đỗ Thanh Thảo,,Nhân viên BD,10
+15d4e891d784977cacbfcbb00c48f133,278,441,139,Hồ Thị Thảo My,,Trưởng nhóm VHLB,7
+18a9042b3fc5b02fe3d57fea87d6992f,2848,4155,130,Vũ Ngọc Ánh,,Assistant,3
+182be0c5cdcd5072bb1864cdee4d3d6e,28,33,20,Trương Thanh Hiền,,Trưởng phòng SXN HN,8
+e369853df766fa44e1ed0ff613f563bd,29,34,23,Hà Ngọc Tùng,,Leader quản lý sản xuất,8
+d8074a35855a7f4935e3e19222d9a9eb,3264,4652,,Lê Tài Nguyên,,Chuyên viên Digital Marketing,14
+f1b035b71ef5f8e1e7c1d6c0c5032faa,3393,4722,24,Nguyễn Vũ Hoàng,,A&R,8
+a8abb4bb284b5b27aa7cb790dc20f80b,3222,440,157,Nguyễn Thị Trà Giang,,,1
+093f65e080a295f8076b1c5722a46aa2,54,59,30,Trịnh Thị Hồng Anh,,Trưởng phòng BD,10
+53420bd6e6798761679772a7dd012674,3394,4723,130,Trần Thị Bích Ngọc,,Assistant,3
+d645920e395fedad7bbbed0eca3fe2e0,35,40,24,Hoàng Duy Vũ,,Leader A&R HN,8
+f7177163c833dff4b38fc8d2872f1ec6,39,44,24,Lê Huy Hùng,,A&R HN,8
+2a79ea27c279e471f4d180b08d62b00a,173,155,130,Trần Thị Thuỷ Tiên,,Assistant,3

@@ -1,32 +1,167 @@
-version: "3.8"
+x-airflow-common: &airflow-common
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: dwh-airflow:3.2.1
+  env_file:
+    - .env
+  environment: &airflow-common-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
+    AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/project/src/dags
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__CORE__PARALLELISM: "1"
+    AIRFLOW__CORE__MAX_ACTIVE_TASKS_PER_DAG: "1"
+    AIRFLOW__CORE__MAX_ACTIVE_RUNS_PER_DAG: "16"
+    AIRFLOW__API__HOST: 0.0.0.0
+    AIRFLOW__API__PORT: "8080"
+    AIRFLOW__API__WORKERS: "1"
+    AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: "true"
+    PYTHONPATH: /opt/airflow/project
+    DWH_PROJECT_ROOT: /opt/airflow/project
+    DBT_BIN: dbt
+    DBT_PROFILES_DIR: /opt/airflow/project/dwh_dbt
+    AIRFLOW_DB_HOST: ${WINDOWS_PG_HOST:-host.docker.internal}
+    AIRFLOW_DB_PORT: ${AIRFLOW_DB_PORT:-5432}
+    AIRFLOW_DB_NAME: ${AIRFLOW_DB_NAME:-airflow}
+    AIRFLOW_DB_USER: ${AIRFLOW_DB_USER:-}
+    AIRFLOW_DB_PASSWORD: ${AIRFLOW_DB_PASSWORD:-}
+    DWH_PG_HOST: ${WINDOWS_PG_HOST:-host.docker.internal}
+    DWH_PG_PORT: ${DWH_PG_PORT:-5432}
+    DWH_PG_DB: ${DWH_PG_DB:-data_warehouse}
+    DWH_PG_USER: ${DWH_PG_USER:-dev}
+    DWH_PG_PASSWORD: ${DWH_PG_PASSWORD:-change-me}
+    MINIO_ENDPOINT: minio:9000
+    MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+    MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-change-me}
+    GSHEET_CREDENTIALS_PATH: /opt/airflow/project/config/gsheet_service_account.json
+  volumes:
+    - ./:/opt/airflow/project
+    - airflow_logs:/opt/airflow/logs
+  depends_on:
+    minio-init:
+      condition: service_completed_successfully
+    airflow-init:
+      condition: service_completed_successfully
+  restart: unless-stopped
 
 services:
-  postgres:
-    image: postgres:15
-    container_name: dwh_postgres
-    environment:
-      POSTGRES_USER: dev
-      POSTGRES_PASSWORD: Inda1234
-      POSTGRES_DB: data_warehouse
-    ports:
-      - "5432:5432"
-    volumes:
-      - pg_data:/var/lib/postgresql/data
-      - ./scripts/init_schemas.sql:/docker-entrypoint-initdb.d/init_schemas.sql
-
   minio:
-    image: minio/minio
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
     container_name: dwh_minio
-    command: server /data --console-address ":9001"
+    command: server /data --address ":9000" --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-change-me}
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "${MINIO_API_EXPOSE_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_EXPOSE_PORT:-9003}:9001"
     volumes:
       - minio_data:/data
+    restart: unless-stopped
+
+  minio-init:
+    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
+    container_name: dwh_minio_init
+    depends_on:
+      - minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-change-me}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        until mc alias set dwh http://minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}"; do
+          echo "Waiting for MinIO..."
+          sleep 2
+        done
+        mc mb --ignore-existing dwh/raw-bronze
+    restart: "no"
+
+  airflow-init:
+    <<: *airflow-common
+    container_name: airflow_init
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+    command:
+      - bash
+      - -c
+      - |
+        set -euo pipefail
+
+        until pg_isready -h "$${AIRFLOW_DB_HOST}" -p "$${AIRFLOW_DB_PORT}"; do
+          echo "Waiting for PostgreSQL on Windows..."
+          sleep 3
+        done
+
+        if ! PGPASSWORD="$${AIRFLOW_DB_PASSWORD}" psql \
+          -h "$${AIRFLOW_DB_HOST}" -p "$${AIRFLOW_DB_PORT}" \
+          -U "$${AIRFLOW_DB_USER}" -d postgres -tAc \
+          "SELECT 1 FROM pg_database WHERE datname = '$${AIRFLOW_DB_NAME}'" | grep -q 1; then
+          PGPASSWORD="$${AIRFLOW_DB_PASSWORD}" createdb \
+            -h "$${AIRFLOW_DB_HOST}" -p "$${AIRFLOW_DB_PORT}" \
+            -U "$${AIRFLOW_DB_USER}" "$${AIRFLOW_DB_NAME}"
+        fi
+
+        if ! PGPASSWORD="$${DWH_PG_PASSWORD}" psql \
+          -h "$${DWH_PG_HOST}" -p "$${DWH_PG_PORT}" \
+          -U "$${DWH_PG_USER}" -d postgres -tAc \
+          "SELECT 1 FROM pg_database WHERE datname = '$${DWH_PG_DB}'" | grep -q 1; then
+          PGPASSWORD="$${DWH_PG_PASSWORD}" createdb \
+            -h "$${DWH_PG_HOST}" -p "$${DWH_PG_PORT}" \
+            -U "$${DWH_PG_USER}" "$${DWH_PG_DB}"
+        fi
+
+        PGPASSWORD="$${DWH_PG_PASSWORD}" psql \
+          -v ON_ERROR_STOP=1 \
+          -h "$${DWH_PG_HOST}" -p "$${DWH_PG_PORT}" \
+          -U "$${DWH_PG_USER}" -d "$${DWH_PG_DB}" \
+          -f /opt/airflow/project/scripts/init_schemas.sql
+
+        airflow db migrate
+        airflow users create \
+          --username "$${AIRFLOW_ADMIN_USER:-admin}" \
+          --password "$${AIRFLOW_ADMIN_PASSWORD:-admin}" \
+          --firstname Airflow \
+          --lastname Admin \
+          --role Admin \
+          --email admin@example.com || true
+        dbt deps --project-dir /opt/airflow/project/dwh_dbt --profiles-dir /opt/airflow/project/dwh_dbt
+    environment:
+      <<: *airflow-common-env
+      AIRFLOW_ADMIN_USER: ${AIRFLOW_ADMIN_USER:-admin}
+      AIRFLOW_ADMIN_PASSWORD: ${AIRFLOW_ADMIN_PASSWORD:-admin}
+    restart: "no"
+
+  airflow-api-server:
+    <<: *airflow-common
+    container_name: airflow_api_server
+    command: api-server
+    ports:
+      - "${AIRFLOW_EXPOSE_PORT:-8081}:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/api/v2/monitor/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  airflow-scheduler:
+    <<: *airflow-common
+    container_name: airflow_scheduler
+    command: scheduler
+
+  airflow-dag-processor:
+    <<: *airflow-common
+    container_name: airflow_dag_processor
+    command: dag-processor
+
+  airflow-triggerer:
+    <<: *airflow-common
+    container_name: airflow_triggerer
+    command: triggerer
 
 volumes:
-  pg_data:
   minio_data:
+  airflow_logs:

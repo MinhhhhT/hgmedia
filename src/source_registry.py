@@ -68,16 +68,35 @@ class SourceRegistry:
         with self.engine.begin() as conn:
             conn.execute(query, {"batch_id": batch_id, "error_message": error_message[:2000]})
 
-    def find_batch_for_rollback(self, source_id: str, target_date: str) -> Optional[dict]:
-        """Tìm batch 'loaded' gần nhất có extracted_at <= target_date để rollback về."""
-        query = text("""
-            SELECT * FROM meta._source_registry
-            WHERE source_id = :source_id AND status = 'loaded'
-              AND extracted_at::date <= :target_date
-            ORDER BY extracted_at DESC LIMIT 1
-        """)
+    def find_batch_for_rollback(self, source_id: str, target_date: str = None) -> Optional[dict]:
+        """
+        Tìm batch có file MinIO để rollback:
+        - target_date=None  → batch gần nhất có file MinIO
+        - target_date='...' → batch gần nhất <= ngày đó có file MinIO
+        Filter: bỏ qua batch streamed và batch rỗng (row_count=0)
+        """
+        if target_date:
+            query = text("""
+                SELECT * FROM meta._source_registry
+                WHERE source_id = :source_id
+                AND minio_path != '(streamed)'
+                AND row_count > 0
+                AND extracted_at::date <= :target_date
+                ORDER BY extracted_at DESC LIMIT 1
+            """)
+            params = {"source_id": source_id, "target_date": target_date}
+        else:
+            query = text("""
+                SELECT * FROM meta._source_registry
+                WHERE source_id = :source_id
+                AND minio_path != '(streamed)'
+                AND row_count > 0
+                ORDER BY extracted_at DESC LIMIT 1
+            """)
+            params = {"source_id": source_id}
+
         with self.engine.connect() as conn:
-            row = conn.execute(query, {"source_id": source_id, "target_date": target_date}).mappings().fetchone()
+            row = conn.execute(query, params).mappings().fetchone()
         return dict(row) if row else None
 
     def history(self, source_id: str, limit: int = 20) -> pd.DataFrame:
@@ -88,3 +107,4 @@ class SourceRegistry:
             ORDER BY extracted_at DESC LIMIT :limit
         """)
         return pd.read_sql(query, self.engine, params={"source_id": source_id, "limit": limit})
+   

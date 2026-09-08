@@ -29,6 +29,12 @@ class StagingLoader:
           - "upsert": cần upsert_key, dùng khi muốn update record cũ + insert record mới
         staging_table dạng "staging.<source_id>" (vd staging.dim_partners)
         """
+        if df is None or len(df) == 0:
+            import logging
+            logging.getLogger(__name__).warning(
+                f"[{staging_table}] DataFrame rỗng (0 dòng) → KHÔNG load, giữ nguyên staging hiện tại"
+            )
+            return 0
         df = df.copy()
         # làm sạch tên cột: bỏ rỗng/xuống dòng, khử trùng tên
         new_cols, seen = [], {}

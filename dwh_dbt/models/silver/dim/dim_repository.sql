@@ -402,5 +402,12 @@ select distinct on (repository_id)
     , repository_id
     , sub_project_id
     , repository_name
+    , case
+        when lower(normalize(repository_name, nfc))
+                = lower(normalize('Không có kho', nfc))
+            or repository_name ~ '[-0-9]'
+            then 'Sản xuất'
+        else 'Thu mua'
+      end as repository_type
 from with_default
 order by repository_id, sub_project_id, repository_name

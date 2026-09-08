@@ -1,0 +1,35 @@
+version: 2
+
+models:
+  - name: mart_powerbi_resource_obt
+    description: >-
+      Power BI import table at exactly one row per HG stock resource. Contains
+      resource attributes plus additive lifetime/snapshot usage, performance,
+      and cost measures; excludes incompatible daily/monthly/process grains.
+    columns:
+      - name: resource_key
+        description: Compact integer key for Power BI relationships and sorting.
+        tests:
+          - not_null
+          - unique
+      - name: resource_id
+        description: Normalized HG stock business key; the declared grain.
+        tests:
+          - not_null
+          - unique
+      - name: resource_count
+        description: Additive row counter; always one.
+        tests:
+          - not_null
+      - name: published_resource_video_uses
+        description: Number of unique published resource-video pairs.
+        tests:
+          - not_null
+      - name: lifetime_views
+        description: Views allocated to the resource and aggregated over all available dates.
+        tests:
+          - not_null
+      - name: lifetime_revenue
+        description: Revenue allocated to the resource and aggregated over all available dates.
+        tests:
+          - not_null
