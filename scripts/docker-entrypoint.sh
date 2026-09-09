@@ -3,8 +3,9 @@ set -e
 
 # In local rebuild mode, expose production-style fake source endpoints inside
 # this runtime container before any Airflow task can import connection config.
+# Invoke through bash so bind-mounted files do not depend on executable mode.
 if [[ "${LOCAL_SOURCE_PROXY_MODE:-false}" =~ ^(1|true|TRUE|yes|YES|on|ON)$ ]]; then
-  /opt/airflow/project/scripts/start_fake_source_proxies.sh
+  bash /opt/airflow/project/scripts/start_fake_source_proxies.sh
 fi
 
 # Build a correctly URL-encoded SQLAlchemy URI from raw environment values.
