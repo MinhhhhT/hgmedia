@@ -45,18 +45,20 @@ start_proxy() {
   echo "[fake-source-proxy] ${label}: ${bind_ip}:${bind_port} -> ${target_host}:${target_port}"
 }
 
-# PostgreSQL source systems. They intentionally have different fake IPs even
-# though the lightweight local lab uses one PostgreSQL backend container.
-start_proxy odoo              127.20.0.11 5432 "$PG_BACKEND_HOST" "$PG_BACKEND_PORT"
-start_proxy hg_stock          127.20.0.12 5432 "$PG_BACKEND_HOST" "$PG_BACKEND_PORT"
+# Nine logical SQL source systems currently used by config/db_sources.yaml.
+# Every system receives its own fake IP/port pair. The fake endpoints are
+# loopback-only inside the runtime container, so they cannot accidentally route
+# to a real HG production network.
 
-# SQL Server source systems. Each logical production system gets its own fake
-# endpoint while sharing one local SQL Server backend that hosts separate DBs.
-start_proxy editing           127.20.0.21 1433 "$MSSQL_BACKEND_HOST" "$MSSQL_BACKEND_PORT"
-start_proxy record_survey     127.20.0.22 1433 "$MSSQL_BACKEND_HOST" "$MSSQL_BACKEND_PORT"
-start_proxy channel_accountant 127.20.0.30 1433 "$MSSQL_BACKEND_HOST" "$MSSQL_BACKEND_PORT"
-start_proxy channel_channel   127.20.0.31 1433 "$MSSQL_BACKEND_HOST" "$MSSQL_BACKEND_PORT"
-start_proxy channel_network   127.20.0.32 1433 "$MSSQL_BACKEND_HOST" "$MSSQL_BACKEND_PORT"
-start_proxy channel_org       127.20.0.33 1433 "$MSSQL_BACKEND_HOST" "$MSSQL_BACKEND_PORT"
-start_proxy channel_project   127.20.0.34 1433 "$MSSQL_BACKEND_HOST" "$MSSQL_BACKEND_PORT"
-start_proxy channel_relation  127.20.0.35 1433 "$MSSQL_BACKEND_HOST" "$MSSQL_BACKEND_PORT"
+# PostgreSQL
+start_proxy odoo                 127.20.0.11 5432 "$PG_BACKEND_HOST" "$PG_BACKEND_PORT"
+start_proxy hg_stock             127.20.0.12 5433 "$PG_BACKEND_HOST" "$PG_BACKEND_PORT"
+
+# SQL Server
+start_proxy editing              127.20.0.21 1433 "$MSSQL_BACKEND_HOST" "$MSSQL_BACKEND_PORT"
+start_proxy record_survey        127.20.0.22 1434 "$MSSQL_BACKEND_HOST" "$MSSQL_BACKEND_PORT"
+start_proxy channel_channel      127.20.0.31 1501 "$MSSQL_BACKEND_HOST" "$MSSQL_BACKEND_PORT"
+start_proxy channel_network      127.20.0.32 1502 "$MSSQL_BACKEND_HOST" "$MSSQL_BACKEND_PORT"
+start_proxy channel_org          127.20.0.33 1503 "$MSSQL_BACKEND_HOST" "$MSSQL_BACKEND_PORT"
+start_proxy channel_project      127.20.0.34 1504 "$MSSQL_BACKEND_HOST" "$MSSQL_BACKEND_PORT"
+start_proxy channel_relationship 127.20.0.35 1505 "$MSSQL_BACKEND_HOST" "$MSSQL_BACKEND_PORT"
