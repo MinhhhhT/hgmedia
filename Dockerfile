@@ -3,12 +3,19 @@ FROM apache/airflow:3.2.1-python3.12
 USER root
 
 # The ETL code connects to SQL Server through ODBC Driver 17.
+# The upstream Airflow image may already configure packages.microsoft.com.
+# Register the Microsoft APT repository only when it is not already present;
+# re-registering it can cause conflicting Signed-By values.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates curl gnupg postgresql-client unixodbc unixodbc-dev \
-    && curl -fsSLo /tmp/packages-microsoft-prod.deb \
-       https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb \
-    && dpkg -i /tmp/packages-microsoft-prod.deb \
-    && rm /tmp/packages-microsoft-prod.deb \
+    && apt-get install -y --no-install-recommends \
+       ca-certificates curl gnupg postgresql-client unixodbc unixodbc-dev \
+    && if ! grep -Rqs "packages.microsoft.com/debian/12/prod" \
+         /etc/apt/sources.list /etc/apt/sources.list.d 2>/dev/null; then \
+         curl -fsSLo /tmp/packages-microsoft-prod.deb \
+           https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb; \
+         dpkg -i /tmp/packages-microsoft-prod.deb; \
+         rm -f /tmp/packages-microsoft-prod.deb; \
+       fi \
     && apt-get update \
     && ACCEPT_EULA=Y apt-get install -y --no-install-recommends msodbcsql17 \
     && apt-get clean \
