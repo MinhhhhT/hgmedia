@@ -39,6 +39,8 @@ x-airflow-common: &airflow-common
     MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
     MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-change-me}
     GSHEET_CREDENTIALS_PATH: ${GSHEET_CREDENTIALS_PATH:-/opt/airflow/project/config/gsheet_service_account.json}
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
   volumes:
     - ./:/opt/airflow/project
     - airflow_logs:/opt/airflow/logs
