@@ -5,11 +5,31 @@ Wrapper mỏng quanh thư viện minio để upload/download raw data (parquet) 
 import io
 from datetime import datetime
 import gc
+import re
 import pandas as pd
 from minio import Minio
 import logging
 logger = logging.getLogger(__name__)
 from src.connections import get_connection
+
+
+def _safe_path_segment(value, fallback: str = "unknown") -> str:
+    """Return one safe, non-empty MinIO object-key segment.
+
+    Local fixture mode intentionally leaves external IDs (Google Sheet/Drive IDs,
+    API URLs, etc.) empty. Object keys must therefore never rely on those IDs
+    being populated. Keep Unicode text, but remove path separators/control chars
+    and normalize whitespace so no empty or ambiguous path segment is produced.
+    """
+    text = str(value or "").strip()
+    if not text:
+        text = fallback
+
+    text = text.replace("/", "_").replace("\\", "_")
+    text = "".join(ch if ord(ch) >= 32 and ord(ch) != 127 else "_" for ch in text)
+    text = re.sub(r"\s+", "_", text)
+    text = re.sub(r"_+", "_", text).strip("._")
+    return text or fallback
 
 
 class MinIOClient:
@@ -31,18 +51,32 @@ class MinIOClient:
 
     def build_path(self, source_config: dict, batch_id: str) -> str:
         st = source_config["source_type"]
+        source_id = source_config["source_id"]
+
         if st == "sql":
-            conn = source_config["connection"]
-            schema = source_config.get("schema", "default")
-            table = source_config["source_table"]
+            conn = _safe_path_segment(source_config["connection"], source_id)
+            schema = _safe_path_segment(source_config.get("schema", "default"), "default")
+            table = _safe_path_segment(source_config["source_table"], source_id)
             raw_key = f"{conn}/{schema}.{table}"
+
         elif st == "google_sheet":
-            key = source_config.get("spreadsheet_id") or source_config.get("folder_id")
-            ws = source_config.get("worksheet_name") or "all"
+            # In local fixture mode the real spreadsheet/folder IDs are deliberately
+            # empty. Fall back to source_id rather than emitting `google_sheet//...`.
+            external_key = source_config.get("spreadsheet_id") or source_config.get("folder_id")
+            key = _safe_path_segment(external_key, source_id)
+            worksheet = (
+                source_config.get("worksheet_name")
+                or source_config.get("worksheet_pattern")
+                or "all"
+            )
+            ws = _safe_path_segment(worksheet, "all")
             raw_key = f"google_sheet/{key}/{ws}"
+
         else:
-            raw_key = f"{st}/{source_config['source_id']}"
-        return f"raw/{raw_key}/{batch_id}/data.parquet"
+            raw_key = f"{_safe_path_segment(st, 'source')}/{_safe_path_segment(source_id, 'unknown')}"
+
+        safe_batch_id = _safe_path_segment(batch_id, source_id)
+        return f"raw/{raw_key}/{safe_batch_id}/data.parquet"
 
     def upload_dataframe(self, df: pd.DataFrame, source_config: dict, batch_id: str) -> str:
         path = self.build_path(source_config, batch_id)
@@ -71,7 +105,6 @@ class MinIOClient:
         """Hỗ trợ cả file đơn và multi-part (tự detect theo prefix)"""
         path = minio_path.replace(f"s3://{self.bucket}/", "")
 
-        import re
         prefix = re.sub(r'(data\.parquet|part-\d+\.parquet)$', '', path)
 
         objects = list(self.client.list_objects(self.bucket, prefix=prefix))
@@ -99,7 +132,6 @@ class MinIOClient:
 
     def download_and_load(self, minio_path: str, staging_table: str, loader, batch_id: str) -> int:
         """Load từng part file trực tiếp vào staging, không concat vào RAM"""
-        import re
         path = minio_path.replace(f"s3://{self.bucket}/", "")
         prefix = re.sub(r'(data\.parquet|part-\d+\.parquet)$', '', path)
 
@@ -137,6 +169,7 @@ class MinIOClient:
             response.close()
             response.release_conn()
         return loader.load(df, staging_table=staging_table, batch_id=batch_id, load_mode="truncate")
+
     @staticmethod
     def make_batch_id(source_id: str) -> str:
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
