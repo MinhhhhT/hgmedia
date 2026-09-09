@@ -21,20 +21,24 @@ x-airflow-common: &airflow-common
     DWH_PROJECT_ROOT: /opt/airflow/project
     DBT_BIN: dbt
     DBT_PROFILES_DIR: /opt/airflow/project/dwh_dbt
-    AIRFLOW_DB_HOST: ${WINDOWS_PG_HOST:-host.docker.internal}
+
+    # Platform services are independent from source-system connections.
+    AIRFLOW_DB_HOST: ${AIRFLOW_DB_HOST:-host.docker.internal}
     AIRFLOW_DB_PORT: ${AIRFLOW_DB_PORT:-5432}
     AIRFLOW_DB_NAME: ${AIRFLOW_DB_NAME:-airflow}
     AIRFLOW_DB_USER: ${AIRFLOW_DB_USER:-}
     AIRFLOW_DB_PASSWORD: ${AIRFLOW_DB_PASSWORD:-}
-    DWH_PG_HOST: ${DWH_PG_HOST:-${WINDOWS_PG_HOST:-host.docker.internal}}
+
+    DWH_PG_HOST: ${DWH_PG_HOST:-host.docker.internal}
     DWH_PG_PORT: ${DWH_PG_PORT:-5432}
     DWH_PG_DB: ${DWH_PG_DB:-data_warehouse}
     DWH_PG_USER: ${DWH_PG_USER:-dev}
     DWH_PG_PASSWORD: ${DWH_PG_PASSWORD:-change-me}
+
     MINIO_ENDPOINT: ${MINIO_ENDPOINT:-minio:9000}
     MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
     MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-change-me}
-    GSHEET_CREDENTIALS_PATH: /opt/airflow/project/config/gsheet_service_account.json
+    GSHEET_CREDENTIALS_PATH: ${GSHEET_CREDENTIALS_PATH:-/opt/airflow/project/config/gsheet_service_account.json}
   volumes:
     - ./:/opt/airflow/project
     - airflow_logs:/opt/airflow/logs
@@ -68,12 +72,12 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-change-me}
-      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-minio:9000}
+      MINIO_INIT_ENDPOINT: ${MINIO_INIT_ENDPOINT:-http://minio:9000}
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
-        until mc alias set dwh "http://$${MINIO_ENDPOINT}" "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}"; do
-          echo "Waiting for MinIO at $${MINIO_ENDPOINT}..."
+        until mc alias set dwh "$${MINIO_INIT_ENDPOINT}" "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}"; do
+          echo "Waiting for MinIO..."
           sleep 2
         done
         mc mb --ignore-existing dwh/raw-bronze
@@ -92,7 +96,7 @@ services:
         set -euo pipefail
 
         until pg_isready -h "$${AIRFLOW_DB_HOST}" -p "$${AIRFLOW_DB_PORT}"; do
-          echo "Waiting for Airflow PostgreSQL at $${AIRFLOW_DB_HOST}:$${AIRFLOW_DB_PORT}..."
+          echo "Waiting for Airflow metadata PostgreSQL..."
           sleep 3
         done
 
@@ -104,6 +108,11 @@ services:
             -h "$${AIRFLOW_DB_HOST}" -p "$${AIRFLOW_DB_PORT}" \
             -U "$${AIRFLOW_DB_USER}" "$${AIRFLOW_DB_NAME}"
         fi
+
+        until pg_isready -h "$${DWH_PG_HOST}" -p "$${DWH_PG_PORT}"; do
+          echo "Waiting for DWH PostgreSQL..."
+          sleep 3
+        done
 
         if ! PGPASSWORD="$${DWH_PG_PASSWORD}" psql \
           -h "$${DWH_PG_HOST}" -p "$${DWH_PG_PORT}" \
