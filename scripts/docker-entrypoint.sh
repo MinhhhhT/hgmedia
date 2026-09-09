@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -e
 
+# In local rebuild mode, expose production-style fake source endpoints inside
+# this runtime container before any Airflow task can import connection config.
+if [[ "${LOCAL_SOURCE_PROXY_MODE:-false}" =~ ^(1|true|TRUE|yes|YES|on|ON)$ ]]; then
+  /opt/airflow/project/scripts/start_fake_source_proxies.sh
+fi
+
 # Build a correctly URL-encoded SQLAlchemy URI from raw environment values.
 # This supports PostgreSQL passwords containing @, :, / and other URL symbols.
 export AIRFLOW_DB_USER="${AIRFLOW_DB_USER:-$DWH_PG_USER}"
