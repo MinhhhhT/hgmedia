@@ -211,7 +211,7 @@ distro_performance_month as (
         , d.isrc
         , null::text as channel_id
         , d.platform
-        , d.repository_id
+        , di.repository_id
         , null::text as project_id
         , null::text as sub_project_id
         , null::text as team
@@ -219,6 +219,8 @@ distro_performance_month as (
         , null::text as status
         , null::text as position_group
     from {{ ref('fact_revenue_stream_distro') }} d
+    left join {{ ref('dim_isrc') }} di
+        on di.isrc = d.isrc
     cross join lateral (
         values
             ('distro_streams', d.stream_count::numeric)
