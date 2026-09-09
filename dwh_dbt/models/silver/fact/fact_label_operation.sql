@@ -18,4 +18,4 @@ left join {{ source('staging', 'x_acceptance_cert') }} ac
     on cast(b.purchase_order_id as bigint) = cast(ac.purchase_order_id as bigint)
 order by
     b.isrc,
-    b.id asc;
+    b.id asc
