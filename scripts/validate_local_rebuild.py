@@ -2,9 +2,11 @@
 """Static validation for the offline HG source-rebuild assets."""
 from __future__ import annotations
 
+import ipaddress
 import json
 import os
 import sys
+from collections import Counter
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -13,12 +15,25 @@ REPO = Path(__file__).resolve().parents[1]
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
+EXPECTED_SQL_CONNECTIONS = {
+    "odoo_pg",
+    "hg_stock",
+    "editing_management",
+    "record_survey",
+    "channel_channel",
+    "channel_network",
+    "channel_organization",
+    "channel_project",
+    "channel_relationship",
+}
+
 
 def main() -> int:
     load_dotenv(REPO / ".env", override=True)
     os.environ.setdefault("LOCAL_FIXTURE_MODE", "true")
 
     from src.config_loader import load_all_sources
+    from src.connections import get_connection
 
     sources = load_all_sources(str(REPO / "config"))
     db_sources = [s for s in sources if s["source_type"] == "sql"]
@@ -42,6 +57,45 @@ def main() -> int:
             f"Manifest/config source mismatch: missing={sorted(config_ids-manifest_ids)}, "
             f"extra={sorted(manifest_ids-config_ids)}"
         )
+
+    configured_connections = {s.get("connection") for s in db_sources}
+    if configured_connections != EXPECTED_SQL_CONNECTIONS:
+        errors.append(
+            "Expected exactly nine active SQL connection groups: "
+            f"missing={sorted(EXPECTED_SQL_CONNECTIONS-configured_connections)}, "
+            f"extra={sorted(configured_connections-EXPECTED_SQL_CONNECTIONS)}"
+        )
+
+    # Local rebuild must expose each logical SQL system through a distinct,
+    # unroutable loopback endpoint. This prevents accidental use of production
+    # IPs and prevents multiple logical systems from silently collapsing onto a
+    # single local connection.
+    if os.environ.get("LOCAL_SOURCE_PROXY_MODE", "").strip().lower() in {"1", "true", "yes", "on"}:
+        endpoints = {}
+        for name in sorted(EXPECTED_SQL_CONNECTIONS):
+            try:
+                conn = get_connection(name)
+            except Exception as exc:
+                errors.append(f"Fake source connection {name} is invalid: {exc}")
+                continue
+            host = str(conn.get("host", ""))
+            port = int(conn.get("port", 0))
+            try:
+                ip = ipaddress.ip_address(host)
+            except ValueError:
+                errors.append(f"Fake source {name} host must be an IP address, got {host!r}")
+                continue
+            if not (ip.version == 4 and host.startswith("127.20.0.")):
+                errors.append(f"Fake source {name} must use 127.20.0.x, got {host}:{port}")
+            endpoints[name] = (host, port)
+
+        duplicate_endpoints = [
+            endpoint for endpoint, count in Counter(endpoints.values()).items() if count > 1
+        ]
+        if duplicate_endpoints:
+            errors.append(f"Fake SQL source endpoints are not unique: {duplicate_endpoints}")
+        if len(endpoints) != 9:
+            errors.append(f"Expected 9 validated fake SQL endpoints, found {len(endpoints)}")
 
     for item in manifest:
         fixture = REPO / item["fixture_csv"]
@@ -91,8 +145,11 @@ def main() -> int:
     print("LOCAL REBUILD VALIDATION: OK")
     print(f" - all sources: {len(sources)}")
     print(f" - SQL source replicas: {len(db_sources)}")
+    print(f" - active SQL source systems: {len(EXPECTED_SQL_CONNECTIONS)}")
     print(f" - non-SQL local fixtures: {len(non_db)}")
     print(f" - generated physical columns: {sum(len(x['source_columns']) for x in manifest)}")
+    if os.environ.get("LOCAL_SOURCE_PROXY_MODE", "").strip().lower() in {"1", "true", "yes", "on"}:
+        print(" - fake SQL endpoint topology: OK (9 unique 127.20.0.x IP/port pairs)")
     return 0
 
 
