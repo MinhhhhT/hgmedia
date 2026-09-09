@@ -5,6 +5,8 @@ Supported forms in YAML string values:
   ${VAR:-default-value}
 
 Secrets and deployment-specific endpoints therefore stay out of versioned YAML.
+Legacy boolean strings such as ``false;`` are normalized defensively so an old
+config typo cannot become a truthy Python string.
 """
 from __future__ import annotations
 
@@ -18,14 +20,20 @@ import yaml
 _ENV_PATTERN = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}")
 
 
-def _expand_string(value: str) -> str:
+def _expand_string(value: str) -> Any:
     def repl(match: re.Match) -> str:
         key, default = match.group(1), match.group(2)
         if key in os.environ:
             return os.environ[key]
         return "" if default is None else default
 
-    return _ENV_PATTERN.sub(repl, value)
+    expanded = _ENV_PATTERN.sub(repl, value)
+    normalized = expanded.strip().rstrip(";").strip().lower()
+    if normalized == "true":
+        return True
+    if normalized == "false":
+        return False
+    return expanded
 
 
 def _expand_env(value: Any) -> Any:
