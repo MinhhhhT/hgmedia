@@ -6,7 +6,11 @@ Ví dụ:
     python main.py run --id dim_partners
     python main.py run --id fact_distribution --force
     python main.py run --type google_sheet          # chạy tất cả nguồn Google Sheet
-    python main.py run --type sql                    # chạy tất cả nguồn DB
+    python main.py run --type sql                   # chạy tất cả nguồn DB
+    python main.py run --type elastic               # chạy tất cả nguồn Elasticsearch
+    python main.py run --type csv                   # chạy tất cả nguồn CSV
+    python main.py run --type fx                    # chạy tất cả nguồn tỷ giá
+    python main.py run --type api                   # chạy tất cả nguồn API
     python main.py rollback --id fact_distribution --date 2026-06-01
     python main.py history --id dim_partners
 """
@@ -21,6 +25,9 @@ from src.source_registry import SourceRegistry
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
+
+
+SOURCE_TYPES = ["google_sheet", "sql", "elastic", "csv", "fx", "api"]
 
 
 def run_one(source_config: dict, force: bool = False):
@@ -72,7 +79,7 @@ def main():
 
     p_run = subparsers.add_parser("run", help="Chạy extract + load cho 1 hoặc nhiều source")
     p_run.add_argument("--id", help="source_id cụ thể")
-    p_run.add_argument("--type", choices=["google_sheet", "sql"], help="chạy tất cả nguồn theo loại")
+    p_run.add_argument("--type", choices=SOURCE_TYPES, help="chạy tất cả nguồn theo loại")
     p_run.add_argument("--force", action="store_true", help="bỏ qua check has_changed, luôn extract lại")
     p_run.add_argument("--month", help="lọc theo tháng YYYY-MM (chỉ nạp tháng đó)")
     p_run.set_defaults(func=cmd_run)
