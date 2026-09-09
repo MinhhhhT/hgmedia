@@ -100,7 +100,7 @@ services:
       - bash
       - -lc
       - |
-        /opt/airflow/project/scripts/start_fake_source_proxies.sh
+        bash /opt/airflow/project/scripts/start_fake_source_proxies.sh
         exec python /opt/airflow/project/scripts/bootstrap_source_replicas.py --seed
     restart: "no"
 
