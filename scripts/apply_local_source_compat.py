@@ -1,17 +1,20 @@
 #!/usr/bin/env python3
-"""Apply local-only compatibility columns required by production source queries.
+"""Apply local-only compatibility required by production source queries/models.
 
-The source-replica DDL generator intentionally derives physical columns from
-staging sample exports. Some production queries reference source-only predicate
-columns that are not selected into staging and therefore cannot appear in those
-samples. This script restores those query-only columns in the disposable local
-SQL Server replicas without changing the production EL queries.
+The source-replica DDL generator derives physical columns from staging sample
+exports plus Data Dictionary metadata. A few source-only predicate columns are
+not present in staging samples, and some application enum types are represented
+by custom dictionary names even though SQL Server stores numeric enum values.
+
+This script restores those local-replica details without changing production EL
+queries or dbt business logic.
 
 Currently required:
 - editing-management.dbo.Resource_Editings.IsDeleted
 - record-survey.dbo.Review.IsDeleted
 - record-survey.dbo.User.IsDeleted
 - record-survey.dbo.RecordingSoundVersion.IsDeleted
+- editing-management.dbo.Resources.ResourceType -> BIGINT
 
 All fixture rows are active records, so missing IsDeleted values default to 0.
 The script is idempotent and is intended to run after bootstrap_source_replicas.
@@ -30,6 +33,11 @@ def env(name: str, default: str = "", required: bool = False) -> str:
     return value
 
 
+def _drain(cur) -> None:
+    while cur.nextset():
+        pass
+
+
 def main() -> None:
     host = env("SOURCE_MSSQL_ADMIN_HOST", env("EDITING_HOST", "source-mssql"))
     port = int(env("SOURCE_MSSQL_ADMIN_PORT", env("EDITING_PORT", "1433")))
@@ -42,7 +50,7 @@ def main() -> None:
         "TrustServerCertificate=yes;Encrypt=no;Connection Timeout=30;"
     )
 
-    targets = [
+    soft_delete_targets = [
         ("editing-management", "dbo", "Resource_Editings"),
         ("record-survey", "dbo", "Review"),
         ("record-survey", "dbo", "User"),
@@ -52,7 +60,8 @@ def main() -> None:
     conn = pyodbc.connect(connection_string, autocommit=True)
     try:
         cur = conn.cursor()
-        for database, schema, table in targets:
+
+        for database, schema, table in soft_delete_targets:
             db = database.replace("]", "]]" )
             schema_table = f"{schema}.{table}".replace("'", "''")
             qschema = schema.replace("]", "]]" )
@@ -69,13 +78,52 @@ BEGIN
 END;
 """
             cur.execute(sql)
-            while cur.nextset():
-                pass
+            _drain(cur)
             print(f"[local-compat] {database}.{schema}.{table}.IsDeleted: OK")
+
+        # The Editing application exposes ResourceType as an enum. The staging
+        # sample contains numeric values (0/2), and the HG dbt model compares it
+        # numerically. Older local DDL generation treated the custom enum name
+        # as NVARCHAR, which changed source semantics and produced text in
+        # staging. Convert the disposable replica back to the numeric form.
+        sql = """
+USE [editing-management];
+IF OBJECT_ID(N'dbo.Resources', N'U') IS NOT NULL
+   AND COL_LENGTH(N'dbo.Resources', N'ResourceType') IS NOT NULL
+   AND EXISTS (
+       SELECT 1
+       FROM sys.columns c
+       JOIN sys.types t ON c.user_type_id = t.user_type_id
+       WHERE c.object_id = OBJECT_ID(N'dbo.Resources')
+         AND c.name = N'ResourceType'
+         AND t.name IN (N'nvarchar', N'varchar', N'nchar', N'char', N'ntext', N'text')
+   )
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM dbo.Resources
+        WHERE NULLIF(LTRIM(RTRIM(CONVERT(nvarchar(100), ResourceType))), N'') IS NOT NULL
+          AND TRY_CONVERT(bigint, ResourceType) IS NULL
+    )
+        THROW 51000, 'Local Resources.ResourceType contains non-numeric values; refusing conversion.', 1;
+
+    UPDATE dbo.Resources
+       SET ResourceType = NULL
+     WHERE NULLIF(LTRIM(RTRIM(CONVERT(nvarchar(100), ResourceType))), N'') IS NULL;
+
+    ALTER TABLE dbo.Resources ALTER COLUMN ResourceType BIGINT NULL;
+END;
+"""
+        cur.execute(sql)
+        _drain(cur)
+        print("[local-compat] editing-management.dbo.Resources.ResourceType: BIGINT OK")
     finally:
         conn.close()
 
-    print(f"Local source compatibility applied: {len(targets)} query-only columns")
+    print(
+        "Local source compatibility applied: "
+        f"{len(soft_delete_targets)} query-only columns + 1 enum type alignment"
+    )
 
 
 if __name__ == "__main__":
