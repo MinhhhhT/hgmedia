@@ -5,10 +5,13 @@
 #   docker compose -f docker-compose.yml -f docker-compose.rebuild.yml run --rm source-bootstrap
 #   docker compose -f docker-compose.yml -f docker-compose.rebuild.yml up -d
 #
-# GitHub Codespaces note:
-# Database clients use host.docker.internal + published host ports instead of
-# direct bridge IPs. Some nested/Codespaces Docker environments can resolve a
-# service name but still time out on container-to-container TCP traffic.
+# Source-system simulation model:
+# - PostgreSQL/SQL Server replicas run only with disposable sample data.
+# - Runtime clients never use the replica container IPs as source endpoints.
+# - Each logical source is exposed through a distinct fake 127.20.0.x IP/port
+#   inside the client container and forwarded by socat to the local replicas.
+# - host.docker.internal is only plumbing behind the fake endpoints, required
+#   because direct container bridge TCP is unreliable in GitHub Codespaces.
 
 services:
   dwh-postgres:
@@ -72,11 +75,16 @@ services:
       - .env
     environment:
       PYTHONPATH: /opt/airflow/project
-      # Use published host ports so this also works in GitHub Codespaces.
-      SOURCE_PG_ADMIN_HOST: host.docker.internal
-      SOURCE_PG_ADMIN_PORT: ${LOCAL_SOURCE_PG_EXPOSE_PORT:-5433}
-      SOURCE_MSSQL_ADMIN_HOST: host.docker.internal
-      SOURCE_MSSQL_ADMIN_PORT: ${LOCAL_SOURCE_MSSQL_EXPOSE_PORT:-1434}
+      LOCAL_SOURCE_PROXY_MODE: "true"
+      SOURCE_PROXY_PG_BACKEND_HOST: host.docker.internal
+      SOURCE_PROXY_PG_BACKEND_PORT: ${LOCAL_SOURCE_PG_EXPOSE_PORT:-5433}
+      SOURCE_PROXY_MSSQL_BACKEND_HOST: host.docker.internal
+      SOURCE_PROXY_MSSQL_BACKEND_PORT: ${LOCAL_SOURCE_MSSQL_EXPOSE_PORT:-1434}
+      # Bootstrap itself also goes through fake source endpoints.
+      SOURCE_PG_ADMIN_HOST: 127.20.0.11
+      SOURCE_PG_ADMIN_PORT: "5432"
+      SOURCE_MSSQL_ADMIN_HOST: 127.20.0.21
+      SOURCE_MSSQL_ADMIN_PORT: "1433"
       SOURCE_MSSQL_ADMIN_USER: sa
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -88,7 +96,12 @@ services:
       source-mssql:
         condition: service_started
     entrypoint: ["/usr/bin/dumb-init", "--"]
-    command: ["python", "/opt/airflow/project/scripts/bootstrap_source_replicas.py", "--seed"]
+    command:
+      - bash
+      - -lc
+      - |
+        /opt/airflow/project/scripts/start_fake_source_proxies.sh
+        exec python /opt/airflow/project/scripts/bootstrap_source_replicas.py --seed
     restart: "no"
 
 volumes:
