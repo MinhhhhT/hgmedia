@@ -75,11 +75,21 @@ services:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-change-me}
       MINIO_INIT_ENDPOINT: ${MINIO_INIT_ENDPOINT:-http://minio:9000}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
+        set -eu
+        attempt=1
+        max_attempts=60
         until mc alias set dwh "$${MINIO_INIT_ENDPOINT}" "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}"; do
-          echo "Waiting for MinIO..."
+          if [ "$${attempt}" -ge "$${max_attempts}" ]; then
+            echo "ERROR: MinIO did not become reachable at $${MINIO_INIT_ENDPOINT} after $${max_attempts} attempts" >&2
+            exit 1
+          fi
+          echo "Waiting for MinIO at $${MINIO_INIT_ENDPOINT} ($${attempt}/$${max_attempts})..."
+          attempt=$$((attempt + 1))
           sleep 2
         done
         mc mb --ignore-existing dwh/raw-bronze
