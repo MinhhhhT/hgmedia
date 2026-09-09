@@ -1,6 +1,7 @@
 elastic_sources:
   - source_id: "channel_video_info"
     source_type: "elastic"
+    fixture_csv: "${LOCAL_FIXTURE_DIR:-exports/hgmediadb_samples_1000_20260828_000045}/staging.channel_video_info.csv"
     connection: "elastic"
     es_index: "channel-video-info"
     date_field: "PublishedAt"
@@ -9,9 +10,10 @@ elastic_sources:
     target_staging_table: "staging.channel_video_info"
     load_mode: "truncate"
     stream_to_staging: false
-    
+
   - source_id: "channel_video_metric"
     source_type: "elastic"
+    fixture_csv: "${LOCAL_FIXTURE_DIR:-exports/hgmediadb_samples_1000_20260828_000045}/staging.channel_video_metric.csv"
     connection: "elastic"
     es_index: "channel-video-metric-*"
     date_field: "Date"

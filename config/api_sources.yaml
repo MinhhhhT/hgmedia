@@ -1,17 +1,18 @@
 api_sources:
   - source_id: "sale"
     source_type: "api"
-    api_url: "https://192.168.8.125:3131/api/StreamAnalytics/sale-details-export"
+    fixture_csv: "${LOCAL_FIXTURE_DIR:-exports/hgmediadb_samples_1000_20260828_000045}/staging.sale.csv"
+    api_url: "${SALE_API_URL}"
     verify_ssl: false
     data_key: "data"
     scroll_key: "scrollId"
     has_more_key: "hasMore"
-    parallel_workers: 15    # 15 luồng, batch 1 xong rồi batch 2 chạy tiếp 5 tháng
+    parallel_workers: 15
     date_from: "2025-06-01"
     date_filter_column: "reportingPeriod"
-    api_date_from_param: "fromDate"      # ← tên param API nhận
-    api_date_to_param: "toDate"          # ← tên param API nhận
-    parallel_by: "month"                 # ← chạy song song theo tháng
+    api_date_from_param: "fromDate"
+    api_date_to_param: "toDate"
+    parallel_by: "month"
     target_staging_table: "staging.sale"
     stream_to_staging: false
     load_mode: "truncate"

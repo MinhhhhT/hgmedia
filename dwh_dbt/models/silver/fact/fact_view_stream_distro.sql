@@ -4,9 +4,9 @@ with sd as (
     where nullif(trim(isrc),'') is not null
 ),
 plat as (
-    select distinct "iSRC" as isrc, retailer
+    select distinct isrc, retailer
     from {{ source('staging','sale') }}
-    where nullif(trim("iSRC"),'') is not null
+    where nullif(trim(isrc),'') is not null
 )
 select
     {{ dbt_utils.generate_surrogate_key(['sd.isrc','sd."reportingDate"','sd."idArtist"']) }} as fact_view_stream_distro_sk

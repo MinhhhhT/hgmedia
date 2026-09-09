@@ -62,7 +62,8 @@ data/fact_view_stream.csv
 *.log
 *.tmp
 *.bak.env
-*.pycoutputs/
+*.pyc
+outputs/
 
 # Generated outputs
 outputs/
@@ -81,3 +82,4 @@ dwh_dbt/logs/
 dbt_packages/
 
 !.env.example
+!.env.rebuild.example

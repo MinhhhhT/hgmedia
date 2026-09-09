@@ -5,34 +5,32 @@ google_sheet_sources:
 
   - source_id: "partners"
     source_type: "google_sheet"
+    fixture_csv: "${LOCAL_FIXTURE_DIR:-exports/hgmediadb_samples_1000_20260828_000045}/staging.partners.csv"
     description: "Danh mục đối tác (Thông tin các kho nhạc BD)"
-    spreadsheet_id: "14160tb_UrXT4LzkjYpPyQ_qp6f72jqc-UEWq5Ghu0sA"
+    spreadsheet_id: "${GSHEET_PARTNERS_PURCHASE_COST_ID}"
     worksheet_pattern: "Thông tin các kho nhạc BD"
     header_row: 2
     data_start_row: 3
     target_staging_table: "staging.partners"
     load_mode: "truncate"
     stream_to_staging: false
-    # KHÔNG field_mapping -> staging full cột
 
   - source_id: "purchased_resource"
     source_type: "google_sheet"
-    folder_id: "1y8Rb5vnMw9WMYR0XlXTrheS3j7BbCn7h"
+    fixture_csv: "${LOCAL_FIXTURE_DIR:-exports/hgmediadb_samples_1000_20260828_000045}/staging.purchased_resource.csv"
+    folder_id: "${GDRIVE_PURCHASED_RESOURCE_FOLDER_ID}"
     worksheet_name: null
     header_row: 1
     data_start_row: 4
     target_staging_table: "staging.purchased_resource"
     load_mode: "truncate"
     stream_to_staging: false
-    # _source_file (tên file/tên sheet dùng để suy ra Repository) được model dbt xử lý ở lớp silver,
-    # không xử lý ở Extractor để giữ Extract đơn giản/generic.
 
-
-# link https://docs.google.com/spreadsheets/d/14160tb_UrXT4LzkjYpPyQ_qp6f72jqc-UEWq5Ghu0sA/edit?pli=1&gid=0#gid=0
   - source_id: "purchase_cost"
     source_type: "google_sheet"
-    spreadsheet_id: "14160tb_UrXT4LzkjYpPyQ_qp6f72jqc-UEWq5Ghu0sA"
-    worksheet_pattern: "Theo dõi CP thực (Kế toán)"   # tab nào chứa chuỗi này đều lấy
+    fixture_csv: "${LOCAL_FIXTURE_DIR:-exports/hgmediadb_samples_1000_20260828_000045}/staging.purchase_cost.csv"
+    spreadsheet_id: "${GSHEET_PARTNERS_PURCHASE_COST_ID}"
+    worksheet_pattern: "Theo dõi CP thực (Kế toán)"
     header_row: 3
     data_start_row: 4
     columns:
@@ -60,20 +58,21 @@ google_sheet_sources:
 
   - source_id: "resource_before_odoo"
     source_type: "google_sheet"
+    fixture_csv: "${LOCAL_FIXTURE_DIR:-exports/hgmediadb_samples_1000_20260828_000045}/staging.resource_before_odoo.csv"
     description: "Dữ liệu lịch sử tài nguyên trước Odoo (sheet INDA)"
-    spreadsheet_id: "1uHGD8iXwetIRNwRUUD68TqdrLcTGG1eJzHjCtg3wVak"
+    spreadsheet_id: "${GSHEET_RESOURCE_BEFORE_ODOO_ID}"
     worksheet_name: "Trang tính1"
     header_row: 1
     data_start_row: 2
     target_staging_table: "staging.resource_before_odoo"
     load_mode: "truncate"
     stream_to_staging: false
-    # KHÔNG field_mapping -> staging giữ full cột
 
   - source_id: "resource_performance"
     source_type: "google_sheet"
+    fixture_csv: "${LOCAL_FIXTURE_DIR:-exports/hgmediadb_samples_1000_20260828_000045}/staging.resource_performance.csv"
     connection: "google_sheet"
-    folder_id: "1L1wxIGCHHFwWU6Tmekn_QPpcbvbd3vmh"
+    folder_id: "${GDRIVE_RESOURCE_PERFORMANCE_FOLDER_ID}"
     file_name: "HG_Check_Data_No_Info.xlsx"
     worksheet_name: "Tùng nhập An - Dữ liệu bổ sung"
     header_key: "ưu tiên"
@@ -100,8 +99,9 @@ google_sheet_sources:
 
   - source_id: "distro_infomation"
     source_type: "google_sheet"
+    fixture_csv: "${LOCAL_FIXTURE_DIR:-exports/hgmediadb_samples_1000_20260828_000045}/staging.distro_infomation.csv"
     description: "[Tech - MLO] Danh sách nhạc cần mapping dự án"
-    spreadsheet_id: "17vVmy9Kv3m5Ah_k8JCs8PnxOnaAybB8R52kkLDuAVms"
+    spreadsheet_id: "${GSHEET_DISTRO_INFORMATION_ID}"
     worksheet_name: "List"
     header_row: 1
     data_start_row: 2
@@ -111,8 +111,9 @@ google_sheet_sources:
 
   - source_id: "resource_infomation_add"
     source_type: "google_sheet"
+    fixture_csv: "${LOCAL_FIXTURE_DIR:-exports/hgmediadb_samples_1000_20260828_000045}/staging.resource_infomation_add.csv"
     description: "File_Data_No_Info_T122025"
-    spreadsheet_id: "1TlfGJtF8BK4dVfpcBullUlFMZFMkU-U7Tl26PwEjQsM"
+    spreadsheet_id: "${GSHEET_RESOURCE_INFORMATION_ADD_ID}"
     worksheet_name: "Bản sao của Stock-DB"
     header_row: 1
     data_start_row: 2

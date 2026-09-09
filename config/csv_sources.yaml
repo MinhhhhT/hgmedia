@@ -1,14 +1,8 @@
 csv_sources:
-  # - source_id: "sale"
-  #   source_type: "csv"
-  #   file_path: "/mnt/d/HG_Project/etl_pipeline/dwh-pipeline-mapping/dwh-pipeline/data/Untitled Discover session.csv"
-  #   sep: ","
-  #   target_staging_table: "staging.sale"
-  #   load_mode: "truncate"
-  #   stream_to_staging: true
   - source_id: "stream_distro"
     source_type: "csv"
-    file_path: "/mnt/d/HG_Project/etl_pipeline/dwh-pipeline-mapping/dwh-pipeline/data/fact_view_stream.csv"
+    fixture_csv: "${STREAM_DISTRO_FIXTURE_PATH:-source_replicas/fixtures/staging.stream_distro.csv}"
+    file_path: "${STREAM_DISTRO_PATH:-data/fact_view_stream.csv}"
     sep: ","
     target_staging_table: "staging.stream_distro"
     load_mode: "truncate"
@@ -16,10 +10,10 @@ csv_sources:
     chunksize: 5000
   - source_id: "usd_rate"
     source_type: "fx"
+    fixture_csv: "${LOCAL_FIXTURE_DIR:-exports/hgmediadb_samples_1000_20260828_000045}/staging.usd_rate.csv"
     start_date: "2025-06-01"
     currency: "vnd"
     target_staging_table: "staging.usd_rate"
     load_mode: "truncate"
     stream_to_staging: false
     batch_days: 30
-

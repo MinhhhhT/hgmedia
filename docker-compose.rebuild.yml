@@ -1,0 +1,87 @@
+# Local/offline reconstruction overlay.
+# Usage:
+#   cp .env.rebuild.example .env
+#   docker compose -f docker-compose.yml -f docker-compose.rebuild.yml up -d dwh-postgres source-postgres source-mssql minio
+#   docker compose -f docker-compose.yml -f docker-compose.rebuild.yml run --rm source-bootstrap
+#   docker compose -f docker-compose.yml -f docker-compose.rebuild.yml up -d
+
+services:
+  dwh-postgres:
+    image: postgres:17
+    container_name: hg_rebuild_dwh_postgres
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: ${DWH_PG_USER:-hgdev}
+      POSTGRES_PASSWORD: ${DWH_PG_PASSWORD:-local-dwh-change-me}
+    ports:
+      - "${LOCAL_DWH_PG_EXPOSE_PORT:-5432}:5432"
+    volumes:
+      - rebuild_dwh_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DWH_PG_USER:-hgdev} -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+  source-postgres:
+    image: postgres:17
+    container_name: hg_rebuild_source_postgres
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: ${SOURCE_PG_ADMIN_USER:-hgsource}
+      POSTGRES_PASSWORD: ${SOURCE_PG_ADMIN_PASSWORD:-local-source-pg-change-me}
+    ports:
+      - "${LOCAL_SOURCE_PG_EXPOSE_PORT:-5433}:5432"
+    volumes:
+      - rebuild_source_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${SOURCE_PG_ADMIN_USER:-hgsource} -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+  source-mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: hg_rebuild_source_mssql
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: ${SOURCE_MSSQL_SA_PASSWORD:-Local-Mssql-Change-Me-2026!}
+    ports:
+      - "${LOCAL_SOURCE_MSSQL_EXPOSE_PORT:-1434}:1433"
+    volumes:
+      - rebuild_source_mssql_data:/var/opt/mssql
+    restart: unless-stopped
+
+  source-bootstrap:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: dwh-airflow:3.2.1
+    container_name: hg_rebuild_source_bootstrap
+    env_file:
+      - .env
+    environment:
+      PYTHONPATH: /opt/airflow/project
+      SOURCE_PG_ADMIN_HOST: source-postgres
+      SOURCE_PG_ADMIN_PORT: "5432"
+      SOURCE_MSSQL_ADMIN_HOST: source-mssql
+      SOURCE_MSSQL_ADMIN_PORT: "1433"
+      SOURCE_MSSQL_ADMIN_USER: sa
+    volumes:
+      - ./:/opt/airflow/project
+    depends_on:
+      source-postgres:
+        condition: service_healthy
+      source-mssql:
+        condition: service_started
+    entrypoint: ["/usr/bin/dumb-init", "--"]
+    command: ["python", "/opt/airflow/project/scripts/bootstrap_source_replicas.py", "--seed"]
+    restart: "no"
+
+volumes:
+  rebuild_dwh_pg_data:
+  rebuild_source_pg_data:
+  rebuild_source_mssql_data:

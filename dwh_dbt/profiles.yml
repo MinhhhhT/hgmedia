@@ -5,8 +5,8 @@ dwh_hgmedia:
       type: postgres
       host: "{{ env_var('DWH_PG_HOST', 'localhost') }}"
       port: "{{ env_var('DWH_PG_PORT', '5432') | as_number }}"
-      user: "{{ env_var('DWH_PG_USER', 'hgmedia') }}"
-      password: "{{ env_var('DWH_PG_PASSWORD', 'hgmedia@123') }}"
-      dbname: "{{ env_var('DWH_PG_DB', 'hgmediadb') }}"
+      user: "{{ env_var('DWH_PG_USER') }}"
+      password: "{{ env_var('DWH_PG_PASSWORD') }}"
+      dbname: "{{ env_var('DWH_PG_DB', 'data_warehouse') }}"
       schema: silver
       threads: 4
