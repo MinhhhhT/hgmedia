@@ -103,7 +103,8 @@ services:
         set -euo pipefail
         bash /opt/airflow/project/scripts/start_fake_source_proxies.sh
         python /opt/airflow/project/scripts/bootstrap_source_replicas.py --seed
-        exec python /opt/airflow/project/scripts/apply_local_source_compat.py
+        python /opt/airflow/project/scripts/apply_local_source_compat.py
+        exec python /opt/airflow/project/scripts/apply_local_relational_fixtures.py
     restart: "no"
 
 volumes:
