@@ -9,6 +9,7 @@ services:
   dwh-postgres:
     image: postgres:17
     container_name: hg_rebuild_dwh_postgres
+    command: ["postgres", "-c", "listen_addresses=*"]
     environment:
       POSTGRES_DB: postgres
       POSTGRES_USER: ${DWH_PG_USER:-hgdev}
@@ -18,7 +19,7 @@ services:
     volumes:
       - rebuild_dwh_pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DWH_PG_USER:-hgdev} -d postgres"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 -U ${DWH_PG_USER:-hgdev} -d postgres"]
       interval: 5s
       timeout: 5s
       retries: 30
@@ -27,6 +28,7 @@ services:
   source-postgres:
     image: postgres:17
     container_name: hg_rebuild_source_postgres
+    command: ["postgres", "-c", "listen_addresses=*"]
     environment:
       POSTGRES_DB: postgres
       POSTGRES_USER: ${SOURCE_PG_ADMIN_USER:-hgsource}
@@ -36,7 +38,7 @@ services:
     volumes:
       - rebuild_source_pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${SOURCE_PG_ADMIN_USER:-hgsource} -d postgres"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 -U ${SOURCE_PG_ADMIN_USER:-hgsource} -d postgres"]
       interval: 5s
       timeout: 5s
       retries: 30
