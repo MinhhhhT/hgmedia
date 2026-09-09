@@ -1,6 +1,6 @@
 -- silver.dim_resource  (target theo Data Dictionary)
 select
-    {{ dbt_utils.generate_surrogate_key(['"_source_id"']) }} as dim_resource_sk
+    {{ dbt_utils.generate_surrogate_key(['id']) }} as dim_resource_sk
     , nullif(trim(cast(id as text)),'') as resource_id
     , nullif(trim(cast(subgenre_id as text)),'') as repository_id
     , nullif(trim(cast(song_name as text)),'') as resource_name
