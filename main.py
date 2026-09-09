@@ -54,11 +54,19 @@ def cmd_run(args):
     if args.type:
         sources = [s for s in sources if s["source_type"] == args.type]
 
+    failures = []
     for src in sources:
         try:
             run_one(src, force=args.force)
         except Exception as e:
+            failures.append((src["source_id"], str(e)))
             logger.error(f"[{src['source_id']}] Lỗi: {e}")
+
+    if failures:
+        logger.error("Batch EL hoàn tất với %d source lỗi:", len(failures))
+        for source_id, error in failures:
+            logger.error(" - %s: %s", source_id, error)
+        raise SystemExit(1)
 
 
 def cmd_rollback(args):
