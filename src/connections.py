@@ -2,6 +2,11 @@
 
 No production endpoint or credential is versioned here. Deployment-specific
 values come from .env, Airflow secrets/connections, or a secret manager.
+
+The runtime supports two distinct modes:
+- live sources: every source system can have its own host/port/credentials;
+- local rebuild: .env.rebuild.example points those same logical connections at
+  disposable local replicas for offline testing.
 """
 from __future__ import annotations
 
@@ -15,6 +20,15 @@ load_dotenv()
 
 def _env(key: str, default: str = "") -> str:
     return os.environ.get(key, default)
+
+
+def _first_env(*keys: str, default: str = "") -> str:
+    """Return the first non-empty environment value from keys."""
+    for key in keys:
+        value = os.environ.get(key)
+        if value is not None and str(value).strip() != "":
+            return str(value)
+    return default
 
 
 CONNECTIONS = {
@@ -81,22 +95,26 @@ CONNECTIONS = {
     },
 }
 
-_CHANNEL_DBS = {
-    "channel_accountant": _env("CHANNEL_ACCOUNTANT_DB", "channel.service.accountant"),
-    "channel_channel": _env("CHANNEL_CHANNEL_DB", "channel.service.channel"),
-    "channel_network": _env("CHANNEL_NETWORK_DB", "channel.service.network"),
-    "channel_organization": _env("CHANNEL_ORGANIZATION_DB", "channel.service.organization"),
-    "channel_project": _env("CHANNEL_PROJECT_DB", "channel.service.project"),
-    "channel_relationship": _env("CHANNEL_RELATIONSHIP_DB", "channel.service.relationship"),
+# Each Channel service can live on a different SQL Server endpoint.  The legacy
+# CHANNEL_HOST/PORT/USER/PASSWORD variables remain as optional shared fallbacks
+# for deployments where all Channel databases are hosted together.
+_CHANNEL_CONNECTIONS = {
+    "channel_accountant": ("CHANNEL_ACCOUNTANT", "channel.service.accountant"),
+    "channel_channel": ("CHANNEL_CHANNEL", "channel.service.channel"),
+    "channel_network": ("CHANNEL_NETWORK", "channel.service.network"),
+    "channel_organization": ("CHANNEL_ORGANIZATION", "channel.service.organization"),
+    "channel_project": ("CHANNEL_PROJECT", "channel.service.project"),
+    "channel_relationship": ("CHANNEL_RELATIONSHIP", "channel.service.relationship"),
 }
-for _name, _db in _CHANNEL_DBS.items():
+
+for _name, (_prefix, _default_db) in _CHANNEL_CONNECTIONS.items():
     CONNECTIONS[_name] = {
         "type": "sqlserver",
-        "host": _env("CHANNEL_HOST"),
-        "port": int(_env("CHANNEL_PORT", "1433")),
-        "database": _db,
-        "user": _env("CHANNEL_USER"),
-        "password": _env("CHANNEL_PASSWORD"),
+        "host": _first_env(f"{_prefix}_HOST", "CHANNEL_HOST"),
+        "port": int(_first_env(f"{_prefix}_PORT", "CHANNEL_PORT", default="1433")),
+        "database": _first_env(f"{_prefix}_DB", default=_default_db),
+        "user": _first_env(f"{_prefix}_USER", "CHANNEL_USER"),
+        "password": _first_env(f"{_prefix}_PASSWORD", "CHANNEL_PASSWORD"),
         "default_schema": "dbo",
     }
 
