@@ -26,12 +26,12 @@ x-airflow-common: &airflow-common
     AIRFLOW_DB_NAME: ${AIRFLOW_DB_NAME:-airflow}
     AIRFLOW_DB_USER: ${AIRFLOW_DB_USER:-}
     AIRFLOW_DB_PASSWORD: ${AIRFLOW_DB_PASSWORD:-}
-    DWH_PG_HOST: ${WINDOWS_PG_HOST:-host.docker.internal}
+    DWH_PG_HOST: ${DWH_PG_HOST:-${WINDOWS_PG_HOST:-host.docker.internal}}
     DWH_PG_PORT: ${DWH_PG_PORT:-5432}
     DWH_PG_DB: ${DWH_PG_DB:-data_warehouse}
     DWH_PG_USER: ${DWH_PG_USER:-dev}
     DWH_PG_PASSWORD: ${DWH_PG_PASSWORD:-change-me}
-    MINIO_ENDPOINT: minio:9000
+    MINIO_ENDPOINT: ${MINIO_ENDPOINT:-minio:9000}
     MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
     MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-change-me}
     GSHEET_CREDENTIALS_PATH: /opt/airflow/project/config/gsheet_service_account.json
@@ -68,11 +68,12 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-change-me}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-minio:9000}
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
-        until mc alias set dwh http://minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}"; do
-          echo "Waiting for MinIO..."
+        until mc alias set dwh "http://$${MINIO_ENDPOINT}" "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}"; do
+          echo "Waiting for MinIO at $${MINIO_ENDPOINT}..."
           sleep 2
         done
         mc mb --ignore-existing dwh/raw-bronze
@@ -91,7 +92,7 @@ services:
         set -euo pipefail
 
         until pg_isready -h "$${AIRFLOW_DB_HOST}" -p "$${AIRFLOW_DB_PORT}"; do
-          echo "Waiting for PostgreSQL on Windows..."
+          echo "Waiting for Airflow PostgreSQL at $${AIRFLOW_DB_HOST}:$${AIRFLOW_DB_PORT}..."
           sleep 3
         done
 
