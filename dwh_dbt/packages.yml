@@ -1,3 +1,4 @@
 # Local rebuild is intentionally self-contained.
-# No external dbt packages are currently referenced by this project.
-packages: []
+# Vendor the dbt_utils macro(s) used by HG models so `dbt deps` works without Internet.
+packages:
+  - local: vendor/dbt_utils
