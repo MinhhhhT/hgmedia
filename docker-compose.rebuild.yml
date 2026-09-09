@@ -4,6 +4,11 @@
 #   docker compose -f docker-compose.yml -f docker-compose.rebuild.yml up -d dwh-postgres source-postgres source-mssql minio
 #   docker compose -f docker-compose.yml -f docker-compose.rebuild.yml run --rm source-bootstrap
 #   docker compose -f docker-compose.yml -f docker-compose.rebuild.yml up -d
+#
+# GitHub Codespaces note:
+# Database clients use host.docker.internal + published host ports instead of
+# direct bridge IPs. Some nested/Codespaces Docker environments can resolve a
+# service name but still time out on container-to-container TCP traffic.
 
 services:
   dwh-postgres:
@@ -15,7 +20,7 @@ services:
       POSTGRES_USER: ${DWH_PG_USER:-hgdev}
       POSTGRES_PASSWORD: ${DWH_PG_PASSWORD:-local-dwh-change-me}
     ports:
-      - "${LOCAL_DWH_PG_EXPOSE_PORT:-5432}:5432"
+      - "${LOCAL_DWH_PG_EXPOSE_PORT:-55432}:5432"
     volumes:
       - rebuild_dwh_pg_data:/var/lib/postgresql/data
     healthcheck:
@@ -67,11 +72,14 @@ services:
       - .env
     environment:
       PYTHONPATH: /opt/airflow/project
-      SOURCE_PG_ADMIN_HOST: source-postgres
-      SOURCE_PG_ADMIN_PORT: "5432"
-      SOURCE_MSSQL_ADMIN_HOST: source-mssql
-      SOURCE_MSSQL_ADMIN_PORT: "1433"
+      # Use published host ports so this also works in GitHub Codespaces.
+      SOURCE_PG_ADMIN_HOST: host.docker.internal
+      SOURCE_PG_ADMIN_PORT: ${LOCAL_SOURCE_PG_EXPOSE_PORT:-5433}
+      SOURCE_MSSQL_ADMIN_HOST: host.docker.internal
+      SOURCE_MSSQL_ADMIN_PORT: ${LOCAL_SOURCE_MSSQL_EXPOSE_PORT:-1434}
       SOURCE_MSSQL_ADMIN_USER: sa
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./:/opt/airflow/project
     depends_on:
