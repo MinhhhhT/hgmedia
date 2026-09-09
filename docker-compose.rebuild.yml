@@ -100,8 +100,10 @@ services:
       - bash
       - -lc
       - |
+        set -euo pipefail
         bash /opt/airflow/project/scripts/start_fake_source_proxies.sh
-        exec python /opt/airflow/project/scripts/bootstrap_source_replicas.py --seed
+        python /opt/airflow/project/scripts/bootstrap_source_replicas.py --seed
+        exec python /opt/airflow/project/scripts/apply_local_source_compat.py
     restart: "no"
 
 volumes:
