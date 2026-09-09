@@ -32,23 +32,22 @@ The exact provenance of every generated column is recorded by the generator in
 
 ## Fake source network
 
-Local SQL sources are deliberately exposed through **fake, unroutable loopback
-IP/port pairs** inside each Airflow/bootstrap runtime.  The EL code therefore
-behaves as if it were connecting to multiple independent external systems while
-all traffic is forwarded only to disposable local Docker replicas.
+Local SQL sources are deliberately exposed through **nine fake, unroutable
+loopback IP/port pairs** inside each Airflow/bootstrap runtime. The EL code
+therefore behaves as if it were connecting to nine independent external source
+systems while all traffic is forwarded only to disposable local Docker replicas.
 
-| Logical source | Fake endpoint |
-| --- | --- |
-| Odoo PostgreSQL | `127.20.0.11:5432` |
-| HG Stock PostgreSQL | `127.20.0.12:5432` |
-| Editing SQL Server | `127.20.0.21:1433` |
-| Record Survey SQL Server | `127.20.0.22:1433` |
-| Channel Accountant | `127.20.0.30:1433` |
-| Channel | `127.20.0.31:1433` |
-| Network | `127.20.0.32:1433` |
-| Organization | `127.20.0.33:1433` |
-| Project | `127.20.0.34:1433` |
-| Relationship | `127.20.0.35:1433` |
+| Logical source | Engine | Tables | Fake endpoint |
+| --- | --- | ---: | --- |
+| Odoo | PostgreSQL | 18 | `127.20.0.11:5432` |
+| HG Stock | PostgreSQL | 11 | `127.20.0.12:5433` |
+| Editing | SQL Server | 4 | `127.20.0.21:1433` |
+| Record Survey | SQL Server | 6 | `127.20.0.22:1434` |
+| Channel | SQL Server | 1 | `127.20.0.31:1501` |
+| Network | SQL Server | 2 | `127.20.0.32:1502` |
+| Organization | SQL Server | 6 | `127.20.0.33:1503` |
+| Project | SQL Server | 1 | `127.20.0.34:1504` |
+| Relationship | SQL Server | 5 | `127.20.0.35:1505` |
 
 These addresses belong to `127.0.0.0/8`; they cannot route to HG production
 networks. `scripts/start_fake_source_proxies.sh` creates local `socat` listeners
@@ -56,10 +55,15 @@ and forwards them to the sample-data replicas. `host.docker.internal` is used
 only behind that proxy layer for GitHub Codespaces compatibility and is never a
 logical source endpoint seen by the EL connection configuration.
 
-The lightweight lab intentionally uses one PostgreSQL backend for Odoo/HG Stock
-and one SQL Server backend for all SQL Server databases.  The fake endpoint layer
-still preserves distinct source-system IP/port identities without requiring many
-resource-heavy SQL Server containers.
+The lightweight lab intentionally uses one PostgreSQL backend to physically host
+Odoo/HG Stock data and one SQL Server backend to physically host the SQL Server
+databases. That implementation detail is hidden behind the fake endpoint layer:
+the application sees nine distinct source-system IP/port identities and still
+uses the normal SQL drivers, authentication, queries, watermarks and extractors.
+
+`channel_accountant` remains supported by `src/connections.py` for compatibility
+with deployments, but no current source in `config/db_sources.yaml` uses it, so
+it is intentionally not part of the nine-system local simulation.
 
 ## Regenerate after a dictionary change
 
@@ -90,7 +94,7 @@ docker compose \
 `source-bootstrap` creates all source databases/tables and seeds the database
 sources from the sample staging exports already present in the repository.
 Pipeline metadata columns are removed before seeding because they are not
-physical source fields.  Bootstrap itself also connects through the fake source
+physical source fields. Bootstrap itself also connects through the fake source
 endpoints, so the same routing model is exercised before Airflow starts.
 
 With `LOCAL_FIXTURE_MODE=true`, Google Sheet, Elasticsearch, Sale API, CSV and FX
