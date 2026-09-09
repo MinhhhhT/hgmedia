@@ -2,6 +2,18 @@
 -- Project names are stored as NFC, trimmed and with repeated whitespace collapsed.
 -- RBO, Distro, and resource_infomation_add are first-class project sources.
 
+{#
+  In an existing HG DWH, reuse the previous dim_project relation to preserve
+  stable project IDs for supplemental project names. A clean local rebuild has
+  no previous relation, so expose an empty relation with the same shape instead
+  of self-referencing a table that does not exist yet.
+#}
+{% set existing_dim_project_relation = adapter.get_relation(
+    database=this.database,
+    schema=this.schema,
+    identifier=this.identifier
+) %}
+
 with from_odoo as (
     select
         nullif(trim(cast(id as text)), '') as project_id
@@ -68,6 +80,7 @@ from_performance as (
 ),
 
 existing_dim_project as (
+    {% if existing_dim_project_relation is not none %}
     select distinct on (project_name_key)
         project_id
         , project_name
@@ -79,7 +92,7 @@ existing_dim_project as (
             , nullif(regexp_replace(normalize(trim(project_name), nfc), '\s+', ' ', 'g'), '') as project_name
             , status
             , lower(regexp_replace(normalize(trim(project_name), nfc), '\s+', ' ', 'g')) as project_name_key
-        from silver.dim_project
+        from {{ existing_dim_project_relation }}
     ) existing
     where project_id is not null
         and project_name is not null
@@ -88,6 +101,14 @@ existing_dim_project as (
         , case when project_id ~ '^[0-9]+$' then 0 else 1 end
         , case when project_id ~ '^[0-9]+$' then project_id::numeric end nulls last
         , project_id
+    {% else %}
+    select
+        cast(null as text) as project_id
+        , cast(null as text) as project_name
+        , cast(null as text) as status
+        , cast(null as text) as project_name_key
+    where false
+    {% endif %}
 ),
 
 -- A slash in Distro's project column represents multiple projects.
