@@ -1,3 +1,9 @@
+{{ config(
+    materialized='incremental',
+    unique_key='fact_label_operation_sk',
+    incremental_strategy='delete+insert'
+) }}
+
 with base as (
     select *
     from {{ source('staging', 'x_music_song') }}
