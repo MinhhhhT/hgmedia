@@ -1,3 +1,9 @@
+{{ config(
+    materialized='incremental',
+    unique_key='fact_youtube_operation_sk',
+    incremental_strategy='delete+insert'
+) }}
+
 with youtube_audio as (
     -- Bat dau tu tracking_video_publish_infos, filter MediaType = 1 (audio)
     select distinct
