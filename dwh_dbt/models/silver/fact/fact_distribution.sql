@@ -1,4 +1,10 @@
 -- silver.fact_distribution
+{{ config(
+    materialized='incremental',
+    unique_key='fact_distribution_sk',
+    incremental_strategy='delete+insert'
+) }}
+
 -- Optimized to hash-join the exclusion set once instead of executing
 -- a correlated NOT EXISTS scan for every distribution row.
 with excluded_stock as (
