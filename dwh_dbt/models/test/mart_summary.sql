@@ -1,4 +1,5 @@
 {{ config(
+    enabled=false,
     materialized='table',
     schema='gold',
     post_hook=[
@@ -8,6 +9,10 @@
         "create index if not exists ix_fact_powerbi_unified_repository on {{ this }} (repository_id)"
     ]
 ) }}
+
+-- Disabled experimental predecessor of gold.fact_powerbi_unified.
+-- Keep this file only as reconstruction history; the production mart contains
+-- the current lineage fixes (including distro repository mapping via dim_isrc).
 
 -- One physical fact table for the Power BI semantic model.
 -- The grain is explicitly carried by grain_type; metric families are stacked
