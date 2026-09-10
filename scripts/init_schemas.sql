@@ -62,3 +62,8 @@ CREATE INDEX IF NOT EXISTS idx_dq_runs_source_time
 
 CREATE INDEX IF NOT EXISTS idx_dq_results_run
     ON meta.dq_validation_results(validation_run_id);
+
+-- Keep bootstrap self-contained: apply the idempotent dbt DQ schema extension
+-- after the base metadata tables exist. \ir resolves relative to this file,
+-- so the same script works both in Docker and from a host psql invocation.
+\ir 002_dq_dbt.sql
