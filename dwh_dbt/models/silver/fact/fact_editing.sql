@@ -1,4 +1,10 @@
 -- silver.fact_editing
+{{ config(
+    materialized='incremental',
+    unique_key='fact_editing_sk',
+    incremental_strategy='delete+insert'
+) }}
+
 with excluded_stock as (
     select distinct
         upper(trim(cast(hg_stock_id as text))) as hg_stock_id
