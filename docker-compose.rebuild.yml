@@ -21,13 +21,15 @@
 # - The local rebuild credentials are URL-safe; expose the connection URI here
 #   as container configuration so Airflow CLI commands executed with `exec`
 #   use the same PostgreSQL metadata DB instead of falling back to SQLite.
-# - GitHub Codespaces in this rebuild has also shown unreliable direct TCP
-#   between sibling containers. Route Airflow Task SDK execution callbacks via
-#   the API server's host-published port instead of Docker bridge networking.
+# - GitHub Codespaces in this rebuild has shown unreliable sibling-container TCP
+#   and unreliable container-to-host published-port hairpinning. LocalExecutor
+#   workers run inside the scheduler container, so the rebuild scheduler starts
+#   a second Airflow API server bound only to 127.0.0.1:8082. Task SDK execution
+#   callbacks stay inside that container and bypass both broken network paths.
+#   The normal UI/API server on published port 8081 remains unchanged.
 
 x-local-airflow-db-env: &local-airflow-db-env
   AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: "postgresql+psycopg2://${AIRFLOW_DB_USER:-hgdev}:${AIRFLOW_DB_PASSWORD:-local-dwh-change-me}@${AIRFLOW_DB_HOST:-host.docker.internal}:${AIRFLOW_DB_PORT:-55432}/${AIRFLOW_DB_NAME:-airflow}"
-  AIRFLOW__CORE__EXECUTION_API_SERVER_URL: "http://host.docker.internal:${AIRFLOW_EXPOSE_PORT:-8081}/execution/"
 
 services:
   dwh-postgres:
@@ -134,6 +136,37 @@ services:
   airflow-scheduler:
     environment:
       <<: *local-airflow-db-env
+      AIRFLOW__CORE__EXECUTION_API_SERVER_URL: "http://127.0.0.1:8082/execution/"
+    command:
+      - bash
+      - -lc
+      - |
+        set -euo pipefail
+        airflow api-server -H 127.0.0.1 -p 8082 >/tmp/airflow-local-execution-api.log 2>&1 &
+        api_pid=$$!
+
+        ready=0
+        for attempt in $$(seq 1 60); do
+          if curl -fsS --noproxy '*' http://127.0.0.1:8082/api/v2/monitor/health >/dev/null 2>&1; then
+            ready=1
+            break
+          fi
+          if ! kill -0 "$$api_pid" 2>/dev/null; then
+            echo "ERROR: local Airflow Execution API exited during startup" >&2
+            cat /tmp/airflow-local-execution-api.log >&2 || true
+            exit 1
+          fi
+          sleep 1
+        done
+
+        if [ "$$ready" -ne 1 ]; then
+          echo "ERROR: local Airflow Execution API did not become ready on 127.0.0.1:8082" >&2
+          cat /tmp/airflow-local-execution-api.log >&2 || true
+          exit 1
+        fi
+
+        echo "Local Airflow Execution API ready at http://127.0.0.1:8082/execution/"
+        exec airflow scheduler
 
   airflow-dag-processor:
     environment:
